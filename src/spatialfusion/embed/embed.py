@@ -100,11 +100,9 @@ def infer_input_dims(sample_list: Iterable[str], base_path: Union[str, Path],
 
 @dataclass
 class AEInputs:
-    """In-memory inputs for the AE step."""
-    adata: sc.AnnData                   # AnnData for a single sample
-    z_uni: pd.DataFrame                 # rows indexed by cell IDs matching adata.obs_names
-    # rows indexed by cell IDs matching adata.obs_names
-    z_scgpt: pd.DataFrame
+    adata: sc.AnnData
+    z_uni: pd.DataFrame
+    z_scgpt: Optional[pd.DataFrame] = None   # ← allow None
 
 
 def load_paired_ae(ae_ckpt: Union[str, Path], d1_dim: int, d2_dim: int,
@@ -161,22 +159,41 @@ def ae_from_arrays(
     Standardizes inputs to match training preprocessing.
     Returns: (z1_df, z2_df, z_joint_df) aligned to inputs.adata.obs_names.
     """
+    # determine which inputs are required based on combine_mode
+    needs_z1 = True
+    needs_z2 = (combine_mode in ["average", "concat", "z2"])
+
     idx = inputs.adata.obs_names.astype(str)
-    common = idx.intersection(
-        inputs.z_uni.index).intersection(inputs.z_scgpt.index)
+
+    if needs_z1:
+        common = idx.intersection(inputs.z_uni.index)
+    if needs_z2:
+        if inputs.z_scgpt is None:
+            raise ValueError(
+                "combine_mode requires scGPT input, but z_scgpt=None")
+        common = common.intersection(inputs.z_scgpt.index)
+
     if len(common) == 0:
-        raise ValueError("No overlapping cells between adata and embeddings.")
+        raise ValueError(
+            "No overlapping cells between adata and required embeddings.")
 
     # --- Standardize before feeding to AE
     x1_df = safe_standardize(inputs.z_uni.loc[common])
-    x2_df = safe_standardize(inputs.z_scgpt.loc[common])
-
     x1_np = x1_df.astype(np.float32).values
-    x2_np = x2_df.astype(np.float32).values
+
+    if needs_z2:
+        x2_df = safe_standardize(inputs.z_scgpt.loc[common])
+        x2_np = x2_df.astype(np.float32).values
+    else:
+        x2_np = None
 
     with torch.no_grad():
         x1 = torch.from_numpy(x1_np).to(device)
-        x2 = torch.from_numpy(x2_np).to(device)
+        if needs_z2:
+            x2 = torch.from_numpy(x2_np).to(device)
+        else:
+            x2 = None
+
         out = model(x1, x2)
 
         z1_t = out.get("z1")
@@ -349,7 +366,18 @@ def run_full_embedding(
         # In-memory branch
         # infer dims from the first sample’s matrices
         first = next(iter(ae_inputs_by_sample.values()))
-        d1_dim, d2_dim = first.z_uni.shape[1], first.z_scgpt.shape[1]
+        d1_dim = first.z_uni.shape[1]
+        if first.z_scgpt is not None:
+            d2_dim = first.z_scgpt.shape[1]
+        else:
+            # load temporarily to inspect expected input dim
+            tmp_state = torch.load(ae_model_path, map_location="cpu")
+            # encoder2 layers always start with a weight of shape (latent_dim, d2_dim)
+            for k, v in tmp_state.items():
+                if k.startswith("encoder2.model.0.weight"):   # first Linear layer
+                    d2_dim = v.shape[1]
+                    break
+
         if ae_model is None:
             if ae_model_path is None:
                 raise ValueError("Provide ae_model or ae_model_path.")
