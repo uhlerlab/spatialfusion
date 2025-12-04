@@ -30,7 +30,7 @@ mamba activate spatialfusion
 # Then install GPU or CPU version below
 ```
 
-### 2. GPU vs CPU set up
+### 2. Install platform-specific libraries (GPU vs CPU)
 
 #### GPU (CUDA 12.4)
 
