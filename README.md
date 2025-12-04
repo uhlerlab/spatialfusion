@@ -22,7 +22,7 @@ SpatialFusion depends on **PyTorch** and **DGL**, which have different builds fo
 
 ---
 
-### 1. Quick Setup
+### 1. Create mamba environment
 
 ```bash
 mamba create -n spatialfusion python=3.10 -y
@@ -30,16 +30,14 @@ mamba activate spatialfusion
 # Then install GPU or CPU version below
 ```
 
----
+### 2. Install platform-specific libraries (GPU vs CPU)
 
-### GPU (CUDA 12.4)
+#### GPU (CUDA 12.4)
 
 ```bash
 pip install "torch==2.4.1" "torchvision==0.19.1" \
   --index-url https://download.pytorch.org/whl/cu124
 conda install -c dglteam/label/th24_cu124 dgl
-cd spatialfusion/
-pip install -e .
 ```
 
 **Note:** TorchText issues exist for this version:
@@ -47,7 +45,7 @@ pip install -e .
 
 ---
 
-### GPU (CUDA 12.1) — *Recommended if using scGPT*
+#### GPU (CUDA 12.1) — *Recommended if using scGPT*
 
 ```bash
 pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 \
@@ -59,14 +57,11 @@ pip install --no-cache-dir torchtext==0.18.0 torchdata==0.9.0
 
 # Optional: UNI (H&E embedding model)
 pip install timm
-
-cd spatialfusion/
-pip install -e .
 ```
 
 ---
 
-### CPU-only
+#### CPU-only
 
 ```bash
 pip install "torch==2.4.1" "torchvision==0.19.1" \
@@ -78,26 +73,33 @@ pip install --no-cache-dir torchtext==0.18.0 torchdata==0.9.0
 
 # Optional, used for UNI
 pip install timm
-
-cd spatialfusion/
-pip install -e .
 ```
 
 > 💡 Replace `cu124` with the CUDA version matching your system (e.g., `cu121`).
 
 ---
 
-### 2. Development Install (Optional)
+### 3. Install SpatialFusion package
+
+#### Basic installation — *Recommended for users*
+```bash
+cd spatialfusion/
+pip install -e .
+```
+---
+#### Developer installation - *Recommended for contributors*
+Includes: `pytest`, `black`, `ruff`, `sphinx`, `matplotlib`, `seaborn`.
 
 ```bash
+cd spatialfusion/
 pip install -e ".[dev,docs]"
 ```
 
-Includes: **pytest**, **black**, **ruff**, **sphinx**, **matplotlib**, **seaborn**.
+
 
 ---
 
-### 3. Verify Installation
+### 4. Verify Installation
 
 ```bash
 python - <<'PY'
@@ -110,7 +112,7 @@ PY
 
 ---
 
-### 4. Notes
+### 5. Notes
 
 * Default output directory is:
 
