@@ -80,18 +80,22 @@ pip install timm
 ---
 
 ### 3. Install SpatialFusion package
+
+#### Basic installation — *Recommended for users*
 ```bash
 cd spatialfusion/
 pip install -e .
 ```
-
-#### Add on: Developer tools (_Optional_)
+---
+#### Developer installation - *Recommended for contributors*
+Includes: `pytest`, `black`, `ruff`, `sphinx`, `matplotlib`, `seaborn`.
 
 ```bash
+cd spatialfusion/
 pip install -e ".[dev,docs]"
 ```
 
-Includes: **pytest**, **black**, **ruff**, **sphinx**, **matplotlib**, **seaborn**.
+
 
 ---
 
