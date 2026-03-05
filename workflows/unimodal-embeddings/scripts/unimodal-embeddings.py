@@ -56,6 +56,8 @@ def embed_UNI(
     he_coords, # typically adata.obsm['spatial'], shape (n_spots, 2) with (x,y) pixel coords
     output_dir: str, # where to write embeddings, UNI.parquet
     model_path: str, # path to UNI weights
+    output_name: str = "UNI.parquet",
+    patch_size: int = 256,
     batch_size: int = 128, # number of patches per forward pass
     device:str = "cuda", # "cuda" or "cpu"
 ):
@@ -70,12 +72,13 @@ def embed_UNI(
     
     batch_imgs = []
     batch_ids = []
+    half_patch = patch_size // 2
     
     print(f"Embedding {len(he_coords)} image patches in batches of {batch_size}...")
     for cid, (x, y) in tqdm(zip(adata.obs_names, he_coords), total=len(adata)):
         x, y = int(x), int(y)
-        x0, x1 = x - 128, x + 128
-        y0, y1 = y - 128, y + 128
+        x0, x1 = x - half_patch, x + half_patch
+        y0, y1 = y - half_patch, y + half_patch
     
         pad_x0 = max(0, -x0)
         pad_x1 = max(0, x1 - wsi.shape[1])
@@ -88,7 +91,7 @@ def embed_UNI(
             mode="constant"
         )
     
-        if patch.shape[:2] != (256, 256):
+        if patch.shape[:2] != (patch_size, patch_size):
             continue
     
         tensor_img = transform(Image.fromarray(patch))
@@ -116,8 +119,9 @@ def embed_UNI(
 
     # Save embedding matrix
     df = pd.DataFrame(embeddings, index=cell_ids)
-    df.to_parquet(f"{output_dir}/UNI.parquet")
-    print(f"Saved {len(df)} embeddings to {output_dir}/UNI.parquet") 
+    uni_out = pl.Path(output_dir) / output_name
+    df.to_parquet(uni_out)
+    print(f"Saved {len(df)} embeddings to {uni_out}") 
 
 
 def run_embed_scGPT(
@@ -134,9 +138,13 @@ def run_embed_scGPT(
     input_bins: int = 51,
     model_run: str = "pretrained",
     num_workers: int = 0,  # if you can use multithreading specify num_workers
+    output_name: str = "scGPT.parquet",
+    scfoundation_dir: str | None = None,
 ) -> None:
-    import sys
-    sys.path.append('../zero-shot-scfoundation/')
+    if scfoundation_dir:
+        sys.path.append(scfoundation_dir)
+    else:
+        sys.path.append('../zero-shot-scfoundation/')
 
     from sc_foundation_evals import cell_embeddings, scgpt_forward, data, model_output
     from sc_foundation_evals.helpers.custom_logging import log
@@ -190,27 +198,163 @@ def run_embed_scGPT(
     pd.DataFrame(
         input_data.adata.obsm["X_scGPT"],
         index=input_data.adata.obs["cell_id"] if "cell_id" in input_data.adata.obs.columns else input_data.adata.obs.index
-    ).to_parquet(pl.Path(output_dir) / "scGPT.parquet")
+    ).to_parquet(pl.Path(output_dir) / output_name)
 
 
 
 def parse_args() -> argparse.Namespace:
     script_dir = pl.Path(__file__).resolve().parent
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["scgpt", "uni", "both"], default="both")
-    parser.add_argument("--adata", type=pl.Path, default=script_dir / "../../../tutorials/data/tutadata_subset.h5ad")
-    parser.add_argument("--wsi", type=pl.Path, default=script_dir / "../../../tutorials/data/wsi_crop.ome.tif")
-    parser.add_argument("--output-dir", type=pl.Path, default=script_dir / "example-results")
-    parser.add_argument("--scgpt-weights", type=pl.Path, default=script_dir / "../weights/scgpt")
-    parser.add_argument("--scfoundation-dir", type=pl.Path, default=script_dir / "../zero-shot-scfoundation")
-    parser.add_argument("--uni-weights", type=pl.Path, default=script_dir / "../weights/uni2/pytorch_model.bin")
-    parser.add_argument("--n-hvg", type=int, default=1200)
-    parser.add_argument("--scgpt-batch-size", type=int, default=16)
-    parser.add_argument("--uni-batch-size", type=int, default=512)
-    parser.add_argument(
+    parser = argparse.ArgumentParser(
+        description="Run unimodal embedding extraction with scGPT and/or UNI.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    shared = parser.add_argument_group("Shared Inputs")
+    shared.add_argument(
+        "--mode",
+        choices=["scgpt", "uni", "both"],
+        default="both",
+        help="Which embedding workflow to run.",
+    )
+    shared.add_argument(
+        "--adata",
+        type=pl.Path,
+        default=script_dir / "../../../tutorials/data/tutadata_subset.h5ad",
+        help="Input AnnData (.h5ad). Used by both scGPT and UNI flows.",
+    )
+    shared.add_argument(
+        "--wsi",
+        type=pl.Path,
+        default=script_dir / "../../../tutorials/data/wsi_crop.ome.tif",
+        help="Input H&E/WSI TIFF file. Used by UNI flow.",
+    )
+    shared.add_argument(
+        "--output-dir",
+        type=pl.Path,
+        default=script_dir / "example-results",
+        help="Directory where output parquet files are written.",
+    )
+    shared.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing output parquet files if present.",
+    )
+
+    scgpt = parser.add_argument_group("scGPT Parameters")
+    scgpt.add_argument(
+        "--scgpt-weights",
+        type=pl.Path,
+        default=script_dir / "../weights/scgpt",
+        help="Path to scGPT model directory (expects args/vocab/weights files).",
+    )
+    scgpt.add_argument(
+        "--scfoundation-dir",
+        type=pl.Path,
+        default=script_dir / "../zero-shot-scfoundation",
+        help="Path added to PYTHONPATH so `sc_foundation_evals` can be imported.",
+    )
+    scgpt.add_argument(
+        "--n-hvg",
+        type=int,
+        default=1200,
+        help="Number of highly variable genes used during preprocessing.",
+    )
+    scgpt.add_argument(
+        "--scgpt-batch-size",
+        type=int,
+        default=16,
+        help="Batch size passed to scGPT inference.",
+    )
+    scgpt.add_argument(
+        "--gene-col",
+        type=str,
+        default="index",
+        help="Column in `adata.var` containing gene names (or `index`).",
+    )
+    scgpt.add_argument(
+        "--layer-key",
+        type=str,
+        default="X",
+        help="AnnData layer containing counts used by scGPT preprocessing.",
+    )
+    scgpt.add_argument(
+        "--log-norm",
+        action="store_true",
+        help="Set if the selected layer is already log-normalized.",
+    )
+    scgpt.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed passed to scGPT config creation.",
+    )
+    scgpt.add_argument(
+        "--max-seq-len",
+        type=int,
+        default=1200,
+        help="Max sequence length passed to scGPT config.",
+    )
+    scgpt.add_argument(
+        "--input-bins",
+        type=int,
+        default=51,
+        help="Number of bins used when discretizing expression values.",
+    )
+    scgpt.add_argument(
+        "--model-run",
+        type=str,
+        default="pretrained",
+        help="Value forwarded to `scGPT_instance(model_run=...)`; valid values depend on scFoundation.",
+    )
+    scgpt.add_argument(
+        "--num-workers",
+        type=int,
+        default=0,
+        help="Number of worker processes for scGPT dataloading/tokenization.",
+    )
+    scgpt.add_argument(
+        "--scgpt-output-name",
+        type=str,
+        default="scGPT.parquet",
+        help="Output filename for scGPT embeddings.",
+    )
+
+    uni = parser.add_argument_group("UNI Parameters")
+    uni.add_argument(
+        "--uni-weights",
+        type=pl.Path,
+        default=script_dir / "../weights/uni2/pytorch_model.bin",
+        help="Path to UNI model weights file.",
+    )
+    uni.add_argument(
+        "--uni-batch-size",
+        type=int,
+        default=512,
+        help="Batch size for UNI patch inference.",
+    )
+    uni.add_argument(
+        "--spatial-key",
+        type=str,
+        default="spatial",
+        help="Key in `adata.obsm` containing spot pixel coordinates for UNI.",
+    )
+    uni.add_argument(
+        "--uni-patch-size",
+        type=int,
+        default=256,
+        help="Square patch size (pixels) extracted around each coordinate.",
+    )
+    uni.add_argument(
+        "--uni-output-name",
+        type=str,
+        default="UNI.parquet",
+        help="Output filename for UNI embeddings.",
+    )
+    uni.add_argument(
         "--device",
         choices=["cuda", "cpu"],
         default="cuda" if torch.cuda.is_available() else "cpu",
+        help="Torch device used for UNI model inference.",
     )
     return parser.parse_args()
 
@@ -224,23 +368,26 @@ def main() -> None:
         sample_name = "SUBSET_Xenium_Ovarian-5k"
         adata_path = args.adata
         model_dir_GPT = args.scgpt_weights
-        sys.path.append(str(args.scfoundation_dir))
-
         print(f"Starting for {sample_name}")
+        scgpt_out = args.output_dir / args.scgpt_output_name
+        if scgpt_out.exists() and not args.overwrite:
+            raise FileExistsError(f"{scgpt_out} exists. Use --overwrite to replace it.")
         run_embed_scGPT(
             dataset_path=str(adata_path),
             model_dir=str(model_dir_GPT),
             output_dir=str(args.output_dir),
             n_hvg=args.n_hvg,
-            gene_col="index",
-            layer_key="X",
-            log_norm=False,
-            seed=42,
-            max_seq_len=1200,
+            gene_col=args.gene_col,
+            layer_key=args.layer_key,
+            log_norm=args.log_norm,
+            seed=args.seed,
+            max_seq_len=args.max_seq_len,
             batch_size=args.scgpt_batch_size,
-            input_bins=51,
-            model_run="pretrained",
-            num_workers=0,
+            input_bins=args.input_bins,
+            model_run=args.model_run,
+            num_workers=args.num_workers,
+            output_name=args.scgpt_output_name,
+            scfoundation_dir=str(args.scfoundation_dir),
         )
 
     if args.mode in {"uni", "both"}:
@@ -251,7 +398,10 @@ def main() -> None:
         output_dir = str(args.output_dir)
         device = args.device
         model_path = str(args.uni_weights)
-        he_coords = adata.obsm["spatial"]
+        he_coords = adata.obsm[args.spatial_key]
+        uni_out = args.output_dir / args.uni_output_name
+        if uni_out.exists() and not args.overwrite:
+            raise FileExistsError(f"{uni_out} exists. Use --overwrite to replace it.")
 
         embed_UNI(
             wsi,
@@ -259,6 +409,8 @@ def main() -> None:
             he_coords,
             output_dir,
             model_path,
+            output_name=args.uni_output_name,
+            patch_size=args.uni_patch_size,
             batch_size=args.uni_batch_size,
             device=device,
         )
