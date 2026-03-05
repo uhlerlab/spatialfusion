@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import pathlib as pl
 import sys
 import warnings
@@ -219,46 +220,47 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     if args.mode in {"scgpt", "both"}:
-        # change this to wherever you saved the data 
-        base_dir = pl.Path('../../../tutorials/data/')
-        sample_name = 'SUBSET_Xenium_Ovarian-5k'
-        adata_path = base_dir / "tutadata_subset.h5ad"
+        # Keep notebook-like defaults but source paths from CLI args.
+        sample_name = "SUBSET_Xenium_Ovarian-5k"
+        adata_path = args.adata
+        model_dir_GPT = args.scgpt_weights
+        sys.path.append(str(args.scfoundation_dir))
 
-        model_dir_GPT = PATH_SCGPT_WEIGHTS
-    print(f'Starting for {sample_name}')
-    run_embed_scGPT(
-        dataset_path=str(adata_path),
-        model_dir=str(model_dir_GPT),
-        output_dir='example-results/',  
-        n_hvg=1200,
-        gene_col="index",
-        layer_key="X",
-        log_norm=False,
-        seed=42,
-        max_seq_len=1200,
-        batch_size=16,
-        input_bins=51,
-        model_run="pretrained",
-        num_workers=0,
-    )
+        print(f"Starting for {sample_name}")
+        run_embed_scGPT(
+            dataset_path=str(adata_path),
+            model_dir=str(model_dir_GPT),
+            output_dir=str(args.output_dir),
+            n_hvg=args.n_hvg,
+            gene_col="index",
+            layer_key="X",
+            log_norm=False,
+            seed=42,
+            max_seq_len=1200,
+            batch_size=args.scgpt_batch_size,
+            input_bins=51,
+            model_run="pretrained",
+            num_workers=0,
+        )
 
     if args.mode in {"uni", "both"}:
-        # set parameters to use with embed_UNI function
-        # specifically, output directory, cuda/cpu device, UNI model path,
-        # and h&e pixel coordinates
-        output_dir = 'example-results'
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        model_path = PATH_UNI_WEIGHTS
-        he_coords = adata.obsm['spatial']
-        
+        adata = sc.read_h5ad(args.adata)
+        with tifffile.TiffFile(args.wsi) as tif:
+            wsi = tif.series[0].asarray()
+
+        output_dir = str(args.output_dir)
+        device = args.device
+        model_path = str(args.uni_weights)
+        he_coords = adata.obsm["spatial"]
+
         embed_UNI(
             wsi,
             adata,
             he_coords,
             output_dir,
             model_path,
-            batch_size = 512,
-            device = device
+            batch_size=args.uni_batch_size,
+            device=device,
         )
 
 
