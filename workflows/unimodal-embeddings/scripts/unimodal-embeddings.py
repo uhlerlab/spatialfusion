@@ -18,7 +18,7 @@ from torchvision import transforms
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-DEFAULT_SCFOUNDATION_DIR = pl.Path("/opt/zero-shot-scfoundation")
+DEFAULT_SCFOUNDATION_DIR = pl.Path("/app/zero-shot-scfoundation")
 
 
 def load_UNI_model(model_path: str, device: str = "cuda"):
