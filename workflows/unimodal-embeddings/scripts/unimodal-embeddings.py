@@ -57,7 +57,6 @@ def embed_UNI(
     output_dir: str, # where to write embeddings, UNI.parquet
     model_path: str, # path to UNI weights
     output_name: str = "UNI.parquet",
-    patch_size: int = 256,
     batch_size: int = 128, # number of patches per forward pass
     device:str = "cuda", # "cuda" or "cpu"
 ):
@@ -72,13 +71,12 @@ def embed_UNI(
     
     batch_imgs = []
     batch_ids = []
-    half_patch = patch_size // 2
     
     print(f"Embedding {len(he_coords)} image patches in batches of {batch_size}...")
     for cid, (x, y) in tqdm(zip(adata.obs_names, he_coords), total=len(adata)):
         x, y = int(x), int(y)
-        x0, x1 = x - half_patch, x + half_patch
-        y0, y1 = y - half_patch, y + half_patch
+        x0, x1 = x - 128, x + 128
+        y0, y1 = y - 128, y + 128
     
         pad_x0 = max(0, -x0)
         pad_x1 = max(0, x1 - wsi.shape[1])
@@ -91,7 +89,7 @@ def embed_UNI(
             mode="constant"
         )
     
-        if patch.shape[:2] != (patch_size, patch_size):
+        if patch.shape[:2] != (256, 256):
             continue
     
         tensor_img = transform(Image.fromarray(patch))
@@ -339,12 +337,6 @@ def parse_args() -> argparse.Namespace:
         help="Key in `adata.obsm` containing spot pixel coordinates for UNI.",
     )
     uni.add_argument(
-        "--uni-patch-size",
-        type=int,
-        default=256,
-        help="Square patch size (pixels) extracted around each coordinate.",
-    )
-    uni.add_argument(
         "--uni-output-name",
         type=str,
         default="UNI.parquet",
@@ -410,7 +402,6 @@ def main() -> None:
             output_dir,
             model_path,
             output_name=args.uni_output_name,
-            patch_size=args.uni_patch_size,
             batch_size=args.uni_batch_size,
             device=device,
         )
