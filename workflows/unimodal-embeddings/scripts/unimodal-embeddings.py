@@ -144,7 +144,7 @@ def run_embed_scGPT(
     else:
         sys.path.append('../zero-shot-scfoundation/')
 
-    from sc_foundation_evals import cell_embeddings, scgpt_forward, data, model_output
+    from sc_foundation_evals import scgpt_forward, data
     from sc_foundation_evals.helpers.custom_logging import log
 
     log.setLevel(logging.INFO)
