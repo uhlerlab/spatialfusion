@@ -40,16 +40,12 @@ RUN pip install --no-cache-dir \
     Pillow \
     tqdm \
     colorlog \
-    wandb
+    wandb \
+    scgpt \
+    IPython
 
-# scGPT is not vendored in this repo; install the version used by the upstream scFoundation setup.
-RUN pip install --no-cache-dir \
-    git+https://github.com/bowang-lab/scGPT.git@v0.1.6
+RUN git clone https://github.com/microsoft/zero-shot-scfoundation.git /app/zero-shot-scfoundation && \
+    cd /app/zero-shot-scfoundation && \
+    git checkout v0.1.1
 
-WORKDIR /opt/spatialfusion
-
-# The script imports sc_foundation_evals from the local workflow checkout and uses relative defaults
-# for weights and auxiliary code under workflows/unimodal-embeddings.
-COPY workflows/unimodal-embeddings /opt/spatialfusion/workflows/unimodal-embeddings
-
-ENTRYPOINT ["python", "/opt/spatialfusion/workflows/unimodal-embeddings/scripts/unimodal-embeddings.py"]
+COPY scripts/unimodal-embeddings.py /app/unimodal-embeddings.py
