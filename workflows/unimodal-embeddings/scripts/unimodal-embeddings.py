@@ -18,6 +18,8 @@ from torchvision import transforms
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+DEFAULT_SCFOUNDATION_DIR = pl.Path("/opt/zero-shot-scfoundation")
+
 
 def load_UNI_model(model_path: str, device: str = "cuda"):
     timm_kwargs = {
@@ -142,7 +144,7 @@ def run_embed_scGPT(
     if scfoundation_dir:
         sys.path.append(scfoundation_dir)
     else:
-        sys.path.append('../zero-shot-scfoundation/')
+        sys.path.append(str(DEFAULT_SCFOUNDATION_DIR))
 
     from sc_foundation_evals import scgpt_forward, data
     from sc_foundation_evals.helpers.custom_logging import log
@@ -248,7 +250,7 @@ def parse_args() -> argparse.Namespace:
     scgpt.add_argument(
         "--scfoundation-dir",
         type=pl.Path,
-        default=script_dir / "../zero-shot-scfoundation",
+        default=DEFAULT_SCFOUNDATION_DIR,
         help="Path added to PYTHONPATH so `sc_foundation_evals` can be imported.",
     )
     scgpt.add_argument(
