@@ -18,6 +18,9 @@ from torchvision import transforms
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+numba_logger = logging.getLogger("numba")
+numba_logger.setLevel(logging.WARNING)
+
 DEFAULT_SCFOUNDATION_DIR = pl.Path("/app/zero-shot-scfoundation")
 
 
