@@ -5,6 +5,7 @@ ENV TZ=Etc/UTC
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 
+# Base OS packages needed to install Python dependencies and clone external repos at build time.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -19,13 +20,15 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 
 RUN python -m pip install --upgrade pip
 
-# PyTorch CUDA 12.1 stack
+# PyTorch GPU stack. Keep this aligned with the CUDA runtime in the base image.
 RUN pip install --no-cache-dir \
     torch==2.3.0 \
     torchvision==0.18.0 \
     --index-url https://download.pytorch.org/whl/cu121
 
-# Runtime dependencies used by workflows/unimodal-embeddings/scripts/unimodal-embeddings.py
+# Python dependencies required by the unimodal embeddings workflow.
+# This includes direct imports from unimodal-embeddings.py plus the scGPT/scFoundation
+# code path used by run_embed_scGPT().
 RUN pip install --no-cache-dir \
     numpy==2.2.6 \
     pandas==2.3.3 \
@@ -44,9 +47,11 @@ RUN pip install --no-cache-dir \
     scgpt==0.2.4 \
     IPython==8.38.0
 
-# Zero shot scfoundation repo - functions are used in scGPT embedding
+# scFoundation is bundled into the image so WDL/Terra only needs to pass data files.
 RUN git clone https://github.com/microsoft/zero-shot-scfoundation.git /app/zero-shot-scfoundation && \
     cd /app/zero-shot-scfoundation && \
     git checkout v0.1.1
 
+# Copy the workflow entry script into a fixed in-image location.
+# Input data, model weights, and outputs are expected to be provided at runtime.
 COPY scripts/unimodal-embeddings.py /app/unimodal-embeddings.py
