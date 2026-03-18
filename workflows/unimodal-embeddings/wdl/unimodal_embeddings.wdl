@@ -34,7 +34,7 @@ workflow GenerateUnimodalEmbeddings {
 
     # Runtime options
     Float run_mem_gb = 32
-    Int run_cpu_cores = 4
+    Int run_cpu_cores = 2
     Int? run_disk_gb
 
     String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:v0.1"
@@ -125,7 +125,7 @@ task RunUnimodalEmbedding {
     String spatial_key
 
     Float mem_gb = 32
-    Int cpu_cores = 4
+    Int cpu_cores = 2
     Int? disk_gb
 
     String docker
