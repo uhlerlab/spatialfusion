@@ -187,6 +187,9 @@ task RunUnimodalEmbedding {
     memory: mem_gb + " GB"
     cpu: cpu_cores
     disks: "local-disk " + select_first([disk_gb, default_disk_gb]) + " HDD"
+    bootDiskSizeGb: 20
+    gpuType: "nvidia-tesla-t4"
+    gpuCount: 1
     preemptible: 3
   }
 }
