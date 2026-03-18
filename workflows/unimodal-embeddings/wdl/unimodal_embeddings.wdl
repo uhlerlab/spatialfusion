@@ -37,7 +37,7 @@ workflow GenerateUnimodalEmbeddings {
     Int run_cpu_cores = 4
     Int? run_disk_gb
 
-    String unimodal_embeddings_docker = "unimodal-embeddings:latest"
+    String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:v0.1"
   }
 
   parameter_meta {
@@ -61,7 +61,7 @@ workflow GenerateUnimodalEmbeddings {
     run_mem_gb: "Runtime setting for memory requested by each scattered embedding task."
     run_cpu_cores: "Runtime setting for CPU cores requested by each scattered embedding task."
     run_disk_gb: "Optional runtime override for local disk requested by each scattered embedding task."
-    unimodal_embeddings_docker: "Docker image containing the embedding script and runtime dependencies."
+    unimodal_embeddings_docker: "Docker image containing the embedding script and runtime dependencies. Defaults to the published vanallenlab image for this workflow."
   }
 
   # Build a mode list and scatter over it so scGPT and UNI can run as independent jobs.
