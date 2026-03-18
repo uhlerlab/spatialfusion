@@ -49,8 +49,8 @@ workflow GenerateUnimodalEmbeddings {
   }
 
   output {
-    File? scgpt_parquet = if (embedding_mode == "uni") then None else select_first(RunUnimodalEmbedding.scgpt_parquet)
-    File? uni_parquet = if (embedding_mode == "scgpt") then None else select_first(RunUnimodalEmbedding.uni_parquet)
+    Array[File] scgpt_parquet = select_all(RunUnimodalEmbedding.scgpt_parquet)
+    Array[File] uni_parquet = select_all(RunUnimodalEmbedding.uni_parquet)
   }
 }
 
@@ -149,8 +149,8 @@ task RunUnimodalEmbedding {
   >>>
 
   output {
-    File? scgpt_parquet = if (mode == "scgpt") then scgpt_output_name else None
-    File? uni_parquet = if (mode == "uni") then uni_output_name else None
+    File? scgpt_parquet = scgpt_output_name
+    File? uni_parquet = uni_output_name
   }
 
   runtime {
