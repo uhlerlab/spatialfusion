@@ -7,7 +7,7 @@ workflow GenerateUnimodalEmbeddings {
     # AnnData object plus one H&E / WSI image. These are the inputs most users should set.
     File adata
     File wsi
-    File? uni_weights
+    File uni_weights
     Boolean input_is_log_normalized
 
     # Mode selection input. Most users will leave this as "both".
@@ -43,7 +43,7 @@ workflow GenerateUnimodalEmbeddings {
   parameter_meta {
     adata: "Primary input. AnnData (.h5ad) used for scGPT embeddings and for the spatial coordinates consumed by UNI."
     wsi: "Primary input. Whole-slide image / H&E TIFF used to generate UNI image embeddings."
-    uni_weights: "Primary input for the common 'both' or UNI-only use case. Optional at the workflow boundary, but required whenever UNI mode is requested."
+    uni_weights: "Primary input for the common 'both' or UNI-only use case. This workflow is optimized for runs that include UNI embeddings, so these weights are required."
     input_is_log_normalized: "Primary input. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
     scgpt_weights: "scGPT weights archive. Defaults to a public gs:// path so most users do not need to provide it explicitly."
@@ -106,7 +106,7 @@ task RunUnimodalEmbedding {
   input {
     File adata
     File wsi
-    File? uni_weights
+    File uni_weights
     String mode
     Boolean input_is_log_normalized
 
@@ -133,7 +133,7 @@ task RunUnimodalEmbedding {
 
   String scgpt_output_name = "scGPT.parquet"
   String uni_output_name = "UNI.parquet"
-  Int default_disk_gb = ceil(size(adata, "GB") + size(wsi, "GB") + size(scgpt_weights, "GB") + if defined(uni_weights) then size(select_first([uni_weights]), "GB") else 0 + 20)
+  Int default_disk_gb = ceil(size(adata, "GB") + size(wsi, "GB") + size(scgpt_weights, "GB") + size(uni_weights, "GB") + 20)
 
   command <<<
     set -eu -o pipefail
@@ -164,17 +164,12 @@ task RunUnimodalEmbedding {
     fi
 
     if [ "~{mode}" = "uni" ]; then
-      if [ "~{defined(uni_weights)}" = "false" ]; then
-        echo "uni_weights must be provided when mode=uni" >&2
-        exit 1
-      fi
-
       python /app/unimodal-embeddings.py \
         --mode uni \
         --adata "~{adata}" \
         --wsi "~{wsi}" \
         --output-dir "." \
-        --uni-weights "~{select_first([uni_weights])}" \
+        --uni-weights "~{uni_weights}" \
         --uni-batch-size ~{uni_batch_size} \
         --spatial-key "~{spatial_key}" \
         --uni-output-name "~{uni_output_name}" \
