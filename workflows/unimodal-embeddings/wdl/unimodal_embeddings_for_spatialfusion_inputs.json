@@ -1,23 +1,6 @@
 {
-    "GenerateUnimodalEmbeddings.adata":"gs://YOUR_BUCKET/path/to/object.h5ad",
-    "GenerateUnimodalEmbeddings.wsi":"gs://YOUR_BUCKET/path/to/wsi.ome.tif",
-    "GenerateUnimodalEmbeddings.uni_weights":"gs://YOUR_BUCKET/path/to/pytorch_model.bin",
-    "GenerateUnimodalEmbeddings.input_is_log_normalized":"${?}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.cpu_cores":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.disk_gb":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.gene_col":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.input_bins":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.layer_key":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.max_seq_len":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.mem_gb":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.model_run":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.n_hvg":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.num_workers":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.scgpt_batch_size":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.seed":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.spatial_key":"${}",
-    "GenerateUnimodalEmbeddings.RunUnimodalEmbedding.uni_batch_size":"${}",
-    "GenerateUnimodalEmbeddings.embedding_mode":"${}",
-    "GenerateUnimodalEmbeddings.scgpt_weights":"${}",
-    "GenerateUnimodalEmbeddings.unimodal_embeddings_docker":"${}"
+  "GenerateUnimodalEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
+  "GenerateUnimodalEmbeddingsForSpatialFusion.wsi": "gs://YOUR_BUCKET/path/to/wsi.ome.tif",
+  "GenerateUnimodalEmbeddingsForSpatialFusion.uni_weights": "gs://YOUR_BUCKET/path/to/pytorch_model.bin",
+  "GenerateUnimodalEmbeddingsForSpatialFusion.input_is_log_normalized": "${?}"
 }
