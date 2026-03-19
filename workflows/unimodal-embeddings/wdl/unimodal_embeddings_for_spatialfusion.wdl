@@ -18,6 +18,14 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     # scGPT weights in VA lab unstructured storage bucket.
     File scgpt_weights = "gs://fc-d0a0b6ac-b16f-47ca-99eb-49d88a2ba4c2/scgpt_weights/scgpt_weights.tar.gz"
 
+    # Optional runtime overrides. By default, this workflow requests 8 GB for scGPT,
+    # 10 GB for UNI, and 2 CPU cores for both modes.
+    Float? scgpt_mem_gb
+    Float? uni_mem_gb
+    Int? cpu_cores
+    Int? disk_gb
+    Int? preemptible_tries
+
     String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:v0.1"
   }
 
@@ -28,6 +36,11 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     input_is_log_normalized: "Primary input. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
     scgpt_weights: "scGPT weights archive. Defaults to a public gs:// path so most users do not need to provide it explicitly."
+    scgpt_mem_gb: "Optional runtime override for scGPT task memory in GB. Default is 8 GB."
+    uni_mem_gb: "Optional runtime override for UNI task memory in GB. Default is 10 GB."
+    cpu_cores: "Optional runtime override for CPU cores requested by each task. Default is 2."
+    disk_gb: "Optional runtime override for local disk requested by each task."
+    preemptible_tries: "Optional runtime override for the number of times Cromwell may try a task on preemptible/spot capacity before falling back to a regular VM."
     unimodal_embeddings_docker: "Docker image containing the embedding script and runtime dependencies. Defaults to the published vanallenlab image for this workflow."
   }
 
@@ -44,6 +57,11 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
         mode = mode,
         input_is_log_normalized = input_is_log_normalized,
         scgpt_weights = scgpt_weights,
+        scgpt_mem_gb = scgpt_mem_gb,
+        uni_mem_gb = uni_mem_gb,
+        cpu_cores = cpu_cores,
+        disk_gb = disk_gb,
+        preemptible_tries = preemptible_tries,
         docker = unimodal_embeddings_docker
     }
   }
@@ -77,10 +95,11 @@ task RunUnimodalEmbedding {
     Int num_workers = 0
     String spatial_key = "spatial"
 
-    Float mem_gb = 28
-    Int cpu_cores = 2
+    Float? scgpt_mem_gb
+    Float? uni_mem_gb
+    Int? cpu_cores
     Int? disk_gb
-    Int preemptible_tries = 0
+    Int? preemptible_tries
 
     String docker
   }
@@ -97,8 +116,9 @@ task RunUnimodalEmbedding {
     model_run: "Advanced setting forwarded to the underlying scFoundation scGPT wrapper."
     num_workers: "Advanced setting controlling scGPT preprocessing and tokenization worker count."
     spatial_key: "Advanced setting for the adata.obsm key containing pixel coordinates used by UNI."
-    mem_gb: "Runtime setting for memory requested by each scattered embedding task."
-    cpu_cores: "Runtime setting for CPU cores requested by each scattered embedding task."
+    scgpt_mem_gb: "Optional runtime override for scGPT task memory in GB."
+    uni_mem_gb: "Optional runtime override for UNI task memory in GB."
+    cpu_cores: "Optional runtime override for CPU cores requested by each task."
     disk_gb: "Optional runtime override for local disk requested by each scattered embedding task."
     preemptible_tries: "Number of times Cromwell may try this task on preemptible/spot capacity before falling back to a regular VM."
     docker: "Docker image containing the embedding script and runtime dependencies."
@@ -106,6 +126,9 @@ task RunUnimodalEmbedding {
 
   String scgpt_output_name = "scGPT.parquet"
   String uni_output_name = "UNI.parquet"
+  Float mem_gb = if (mode == "uni") then select_first([uni_mem_gb, 10.0]) else select_first([scgpt_mem_gb, 8.0])
+  Int task_cpu_cores = select_first([cpu_cores, 2])
+  Int task_preemptible_tries = select_first([preemptible_tries, 0])
   Int default_disk_gb = ceil(size(adata, "GB") + size(wsi, "GB") + size(scgpt_weights, "GB") + size(uni_weights, "GB") + 20)
 
   command <<<
@@ -158,11 +181,11 @@ task RunUnimodalEmbedding {
   runtime {
     docker: docker
     memory: mem_gb + " GB"
-    cpu: cpu_cores
+    cpu: task_cpu_cores
     disks: "local-disk " + select_first([disk_gb, default_disk_gb]) + " HDD"
     bootDiskSizeGb: 20
     gpuType: "nvidia-tesla-t4"
     gpuCount: 1
-    preemptible: preemptible_tries
+    preemptible: task_preemptible_tries
   }
 }
