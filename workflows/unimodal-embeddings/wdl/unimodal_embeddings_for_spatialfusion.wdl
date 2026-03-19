@@ -1,7 +1,7 @@
 version 1.0
 
 
-workflow GenerateUnimodalEmbeddings {
+workflow GenerateUnimodalEmbeddingsForSpatialFusion {
   input {
     # Primary user inputs for the common case: run both scGPT and UNI embeddings from one
     # AnnData object plus one H&E / WSI image. These are the inputs most users should set.
@@ -22,8 +22,8 @@ workflow GenerateUnimodalEmbeddings {
   }
 
   parameter_meta {
-    adata: "Primary input. AnnData (.h5ad) used for scGPT embeddings and for the spatial coordinates consumed by UNI."
-    wsi: "Primary input. Whole-slide image / H&E TIFF used to generate UNI image embeddings."
+    adata: "Primary input. AnnData (.h5ad) used for scGPT embeddings and for the spatial coordinates consumed by UNI. Spatial coordinates are expected in adata.obsm['spatial']."
+    wsi: "Primary input. Whole-slide image / H&E TIFF used to generate UNI image embeddings. TIFF / OME-TIFF format is expected."
     uni_weights: "Primary input for the common 'both' or UNI-only use case. This workflow is optimized for runs that include UNI embeddings, so these weights are required."
     input_is_log_normalized: "Primary input. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
@@ -80,6 +80,7 @@ task RunUnimodalEmbedding {
     Float mem_gb = 28
     Int cpu_cores = 2
     Int? disk_gb
+    Int preemptible_tries = 0
 
     String docker
   }
@@ -99,6 +100,7 @@ task RunUnimodalEmbedding {
     mem_gb: "Runtime setting for memory requested by each scattered embedding task."
     cpu_cores: "Runtime setting for CPU cores requested by each scattered embedding task."
     disk_gb: "Optional runtime override for local disk requested by each scattered embedding task."
+    preemptible_tries: "Number of times Cromwell may try this task on preemptible/spot capacity before falling back to a regular VM."
     docker: "Docker image containing the embedding script and runtime dependencies."
   }
 
@@ -161,6 +163,6 @@ task RunUnimodalEmbedding {
     bootDiskSizeGb: 20
     gpuType: "nvidia-tesla-t4"
     gpuCount: 1
-    preemptible: 3
+    preemptible: preemptible_tries
   }
 }
