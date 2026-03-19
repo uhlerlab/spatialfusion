@@ -126,7 +126,7 @@ task RunUnimodalEmbedding {
 
   String scgpt_output_name = "scGPT.parquet"
   String uni_output_name = "UNI.parquet"
-  Float mem_gb = if (mode == "uni") then select_first([uni_mem_gb, 10.0]) else select_first([scgpt_mem_gb, 8.0])
+  Float mem_gb = if (mode == "uni") then select_first([uni_mem_gb, 14.0]) else select_first([scgpt_mem_gb, 8.0])
   Int task_cpu_cores = select_first([cpu_cores, 2])
   Int task_preemptible_tries = select_first([preemptible_tries, 0])
   Int default_disk_gb = ceil(size(adata, "GB") + size(wsi, "GB") + size(scgpt_weights, "GB") + size(uni_weights, "GB") + 20)
