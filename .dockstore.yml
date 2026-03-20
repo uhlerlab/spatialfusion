@@ -1,0 +1,9 @@
+version: 1.2
+
+workflows:
+  - name: unimodal-embeddings-for-spatialfusion
+    subclass: WDL
+    primaryDescriptorPath: /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion.wdl
+    readMePath: /workflows/unimodal-embeddings/wdl/README.md
+    testParameterFiles:
+      - /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion_inputs.json
