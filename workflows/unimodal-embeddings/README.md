@@ -9,7 +9,7 @@ This workflow generates the unimodal embedding inputs used by SpatialFusion:
 
 Before running this step, you need:
 
-- access to GPUs (we tested this on NVIDIA Tesla T4 GPU)
+- access to a GPU-enabled machine (note: we tested this using a NVIDIA Tesla T4)
 - Docker
 - your own input data:
   - an AnnData `.h5ad` file
@@ -26,7 +26,7 @@ Your inputs should look like this:
 - `wsi`: whole-slide image / H&E TIFF used to generate UNI image embeddings. TIFF / OME-TIFF format is expected.
 - `scgpt_weights`: a directory containing `best_model.pt`, `args.json`, and `vocab.json`.
 - `uni_weights`: the UNI model weights file `pytorch_model.bin`.
-- `input_is_log_normalized`: before running the script, decide whether your AnnData expression values are already log-normalized. You will pass `True` if they are already log-normalized and `False` if they are not.
+- `input_is_log_normalized`: decide whether your AnnData expression values are already log-normalized. You will pass `True` if they are already log-normalized and `False` if they are not.
 
 To get the model weights:
 
@@ -38,43 +38,49 @@ To get the model weights:
 Pull the public Docker image:
 
 ```bash
-docker pull vanallenlab/unimodal-embeddings:latest
+docker pull vanallenlab/unimodal-embeddings:v0.1
 ```
 
-Set local path variables for your data, weights, and output directory:
+Set local path variables for each required input. These should be absolute paths.
 
 ```bash
-DATA_DIR=/path/to/data
-WEIGHTS_DIR=/path/to/weights
-OUTPUT_DIR=/path/to/output
+ADATA=/absolute/path/to/object.h5ad
+WSI=/absolute/path/to/image.ome.tif
+SCGPT_WEIGHTS_DIR=/absolute/path/to/scgpt
+UNI_WEIGHTS=/absolute/path/to/pytorch_model.bin
+OUTPUT_DIR=/absolute/path/to/output
 ```
 
-Expected contents:
+Notes:
 
-- `$DATA_DIR/object.h5ad`
-- `$DATA_DIR/image.ome.tif`
-- `$WEIGHTS_DIR/scgpt/` containing `best_model.pt`, `args.json`, and `vocab.json`
-- `$WEIGHTS_DIR/uni2/pytorch_model.bin`
+- `SCGPT_WEIGHTS_DIR` should point to a directory containing `best_model.pt`, `args.json`, and `vocab.json`.
 
 ## 4. Run the Docker command
 
 ```bash
 docker run --rm --gpus all \
-  -v "$DATA_DIR":/data \
-  -v "$WEIGHTS_DIR":/weights \
+  -v "$ADATA":/inputs/object.h5ad \
+  -v "$WSI":/inputs/image.ome.tif \
+  -v "$SCGPT_WEIGHTS_DIR":/weights/scgpt \
+  -v "$UNI_WEIGHTS":/weights/pytorch_model.bin \
   -v "$OUTPUT_DIR":/out \
   vanallenlab/unimodal-embeddings:latest \
   python /app/unimodal-embeddings.py \
   --mode both \
-  --adata /data/object.h5ad \
+  --adata /inputs/object.h5ad \
   --input-is-log-normalized False \
-  --wsi /data/image.ome.tif \
+  --wsi /inputs/image.ome.tif \
   --output-dir /out \
   --scgpt-weights /weights/scgpt \
-  --uni-weights /weights/uni2/pytorch_model.bin
+  --uni-weights /weights/pytorch_model.bin
 ```
 
 This will write:
 
 - `/out/scGPT.parquet`
 - `/out/UNI.parquet`
+
+
+## Notes
+
+- This README shows the minimal inputs for the common case. The script exposes additional optional parameters for advanced use; see `scripts/unimodal-embeddings.py` for the full CLI.
