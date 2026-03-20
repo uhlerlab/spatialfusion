@@ -14,7 +14,7 @@ The method operates at **single-cell resolution**, and can be applied to:
 
 By combining molecular and morphological features, SpatialFusion captures coordinated patterns of tissue architecture and gene expression. A key design principle is a biologically informed definition of niches: not simply spatial neighborhoods, but **reproducible microenvironments** characterized by pathway-level activation signatures and functional coherence across tissues. To reflect this prior, the latent space of the model is trained to encode biologically meaningful pathway activations, enabling robust discovery of integrated niches.
 
-The method is described in the paper: **XXX** (citation forthcoming).
+The method is described in the paper: [SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping](https://doi.org/10.64898/2026.03.16.712056).
 
 You can find detailed documentation at https://uhlerlab.github.io/spatialfusion/
 
