@@ -20,5 +20,5 @@ By default, the workflow runs both embedding modes in parallel and returns:
 ## Notes
 
 - `UNI` weights are not bundled with the workflow. Users must request access to the UNI2-h weights from Mahmood Lab at <https://huggingface.co/MahmoodLab/UNI2-h>, upload the weights file to an accessible `gs://` bucket, and provide that path as the `uni_weights` input.
-- The default `scgpt_weights` archive is derived from the demo weights released with the figshare dataset accompanying *Assessing the limits of zero-shot foundation models in single-cell biology* (DOI: <https://doi.org/10.6084/m9.figshare.24747228>).
+- `scgpt_weights` defaults to a VA lab `gs://` archive derived from the demo weights released with the figshare dataset accompanying *Assessing the limits of zero-shot foundation models in single-cell biology* (DOI: <https://doi.org/10.6084/m9.figshare.24747228>). If you do not have access to that bucket, download `best_model.pt`, `args.json`, and `vocab.json` from the figshare source, package them into a `.tar.gz`, upload that archive to an accessible `gs://` bucket, and override the `scgpt_weights` input with your own path.
 - To run only one embedding mode, set `embedding_mode` to `scgpt` or `uni`.

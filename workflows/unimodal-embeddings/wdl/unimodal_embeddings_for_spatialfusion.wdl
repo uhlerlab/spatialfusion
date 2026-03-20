@@ -35,7 +35,7 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     uni_weights: "Primary input for the common 'both' or UNI-only use case. This workflow is optimized for runs that include UNI embeddings, so these weights are required."
     input_is_log_normalized: "Primary input. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
-    scgpt_weights: "scGPT weights archive. Defaults to a public gs:// path derived from the figshare demo weights released with the zero-shot foundation model evaluation dataset."
+    scgpt_weights: "scGPT weights archive. Defaults to a VA lab gs:// path derived from the figshare demo weights released with the zero-shot foundation model evaluation dataset. External users can override this with their own gs:// archive containing best_model.pt, args.json, and vocab.json."
     scgpt_mem_gb: "Optional runtime override for scGPT task memory in GB. Default is 8 GB."
     uni_mem_gb: "Optional runtime override for UNI task memory in GB. Default is 10 GB."
     cpu_cores: "Optional runtime override for CPU cores requested by each task. Default is 2."
