@@ -5,6 +5,13 @@ This workflow generates the unimodal embedding inputs used by SpatialFusion:
 - `scGPT.parquet` from spatial transcriptomics data with `scGPT`
 - `UNI.parquet` from H&E / whole-slide imaging data with `UNI`
 
+There are two supported ways to run this step:
+
+- use the WDL workflow on a platform such as Terra via Dockstore
+- run the published Docker image directly on your own GPU machine
+
+This README describes the second option: running the Docker image and script directly.
+
 ## 1. What you need
 
 Before running this step, you need:
