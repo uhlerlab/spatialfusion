@@ -206,7 +206,6 @@ def run_embed_scGPT(
 
 
 def parse_args() -> argparse.Namespace:
-    script_dir = pl.Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(
         description="Run unimodal embedding extraction with scGPT and/or UNI.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -222,19 +221,19 @@ def parse_args() -> argparse.Namespace:
     shared.add_argument(
         "--adata",
         type=pl.Path,
-        default=script_dir / "../../../tutorials/data/tutadata_subset.h5ad",
+        required=True,
         help="Input AnnData (.h5ad). Used by both scGPT and UNI flows.",
     )
     shared.add_argument(
         "--wsi",
         type=pl.Path,
-        default=script_dir / "../../../tutorials/data/wsi_crop.ome.tif",
+        default=None,
         help="Input H&E/WSI TIFF file. Used by UNI flow.",
     )
     shared.add_argument(
         "--output-dir",
         type=pl.Path,
-        default=script_dir / "example-results",
+        default=pl.Path.cwd(),
         help="Directory where output parquet files are written.",
     )
     shared.add_argument(
@@ -247,13 +246,13 @@ def parse_args() -> argparse.Namespace:
     scgpt.add_argument(
         "--scgpt-weights",
         type=pl.Path,
-        default=script_dir / "../weights/scgpt",
+        default=None,
         help="Path to scGPT model directory (expects args/vocab/weights files).",
     )
     scgpt.add_argument(
         "--scfoundation-dir",
         type=pl.Path,
-        default=DEFAULT_SCFOUNDATION_DIR,
+        default=None,
         help="Path added to PYTHONPATH so `sc_foundation_evals` can be imported.",
     )
     scgpt.add_argument(
@@ -281,9 +280,10 @@ def parse_args() -> argparse.Namespace:
         help="AnnData layer containing counts used by scGPT preprocessing.",
     )
     scgpt.add_argument(
-        "--log-norm",
-        action="store_true",
-        help="Set if the selected layer is already log-normalized.",
+        "--input-is-log-normalized",
+        choices=["True", "False"],
+        required=True,
+        help="Whether the selected layer is already log-normalized.",
     )
     scgpt.add_argument(
         "--seed",
@@ -326,7 +326,7 @@ def parse_args() -> argparse.Namespace:
     uni.add_argument(
         "--uni-weights",
         type=pl.Path,
-        default=script_dir / "../weights/uni2/pytorch_model.bin",
+        default=None,
         help="Path to UNI model weights file.",
     )
     uni.add_argument(
@@ -359,9 +359,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    log_norm = args.input_is_log_normalized == "True"
 
     if args.mode in {"scgpt", "both"}:
-        # Keep notebook-like defaults but source paths from CLI args.
+        if args.scgpt_weights is None:
+            raise ValueError("--scgpt-weights is required when mode is 'scgpt' or 'both'.")
+        scfoundation_dir = args.scfoundation_dir
+        if scfoundation_dir is None:
+            if DEFAULT_SCFOUNDATION_DIR.exists():
+                scfoundation_dir = DEFAULT_SCFOUNDATION_DIR
+            else:
+                raise ValueError("--scfoundation-dir is required unless /app/zero-shot-scfoundation exists.")
+
         sample_name = "SUBSET_Xenium_Ovarian-5k"
         adata_path = args.adata
         model_dir_GPT = args.scgpt_weights
@@ -376,7 +385,7 @@ def main() -> None:
             n_hvg=args.n_hvg,
             gene_col=args.gene_col,
             layer_key=args.layer_key,
-            log_norm=args.log_norm,
+            log_norm=log_norm,
             seed=args.seed,
             max_seq_len=args.max_seq_len,
             batch_size=args.scgpt_batch_size,
@@ -384,10 +393,14 @@ def main() -> None:
             model_run=args.model_run,
             num_workers=args.num_workers,
             output_name=args.scgpt_output_name,
-            scfoundation_dir=str(args.scfoundation_dir),
+            scfoundation_dir=str(scfoundation_dir),
         )
 
     if args.mode in {"uni", "both"}:
+        if args.wsi is None:
+            raise ValueError("--wsi is required when mode is 'uni' or 'both'.")
+        if args.uni_weights is None:
+            raise ValueError("--uni-weights is required when mode is 'uni' or 'both'.")
         adata = sc.read_h5ad(args.adata)
         with tifffile.TiffFile(args.wsi) as tif:
             wsi = tif.series[0].asarray()
