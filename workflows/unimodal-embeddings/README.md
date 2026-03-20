@@ -75,10 +75,10 @@ docker run --rm --gpus all \
   --uni-weights /weights/pytorch_model.bin
 ```
 
-This will write:
+This will write the output files to your local machine at:
 
-- `/out/scGPT.parquet`
-- `/out/UNI.parquet`
+- `$OUTPUT_DIR/scGPT.parquet`
+- `$OUTPUT_DIR/UNI.parquet`
 
 
 ## Notes
