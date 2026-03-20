@@ -145,11 +145,11 @@ task RunUnimodalEmbedding {
         --wsi "~{wsi}" \
         --output-dir "." \
         --scgpt-weights "scgpt_weights" \
+        --input-is-log-normalized ~{if (input_is_log_normalized) then "True" else "False"} \
         --n-hvg ~{n_hvg} \
         --scgpt-batch-size ~{scgpt_batch_size} \
         --gene-col "~{gene_col}" \
         --layer-key "~{layer_key}" \
-        ~{if (input_is_log_normalized) then "--log-norm" else ""} \
         --seed ~{seed} \
         --max-seq-len ~{max_seq_len} \
         --input-bins ~{input_bins} \
@@ -166,6 +166,7 @@ task RunUnimodalEmbedding {
         --wsi "~{wsi}" \
         --output-dir "." \
         --uni-weights "~{uni_weights}" \
+        --input-is-log-normalized ~{if (input_is_log_normalized) then "True" else "False"} \
         --uni-batch-size ~{uni_batch_size} \
         --spatial-key "~{spatial_key}" \
         --uni-output-name "~{uni_output_name}" \
