@@ -21,17 +21,16 @@ There are two supported ways to generate unimodal embeddings:
    Launch via Dockstore: 
    https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
 
-### 2. Docker + script (this guide)    
+### 2. Docker + script (this guide) 
+
     Best if you:
     - have access to a GPU machine
 
-## Outputs
-This step produces two inputs required for SpatialFusion
-
-- `scGPT.parquet` - embeddings from spatial transcriptomics data
-- `UNI.parquet` - embeddings from H&E/ whole-slide images
-
 ---
+
+
+The remainder of this guide walks through the **Docker + script workflow**
+
 ## 1. Requirements
 
 Before running this step, you will need:
@@ -111,4 +110,4 @@ $OUTPUT_DIR/
 ## Notes
 - This guide covers the most common use case with minimal inputs
 - Additional optional parameters are available, see
-`scripts/unimodal-embeddings.py`
+[`unimodal-embeddings.py`](https://github.com/uhlerlab/spatialfusion/blob/mkdocs-update/workflows/unimodal-embeddings/scripts/unimodal-embeddings.py#L208)
