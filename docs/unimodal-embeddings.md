@@ -11,7 +11,6 @@ These embeddings are required inputs to run SpatialFusion.
 
 GPU acceleration is highly recommended for this step.
 
----
 ## Choose a workflow
 There are two supported ways to generate unimodal embeddings:
 ### 1. WDL workflow 
@@ -22,11 +21,10 @@ There are two supported ways to generate unimodal embeddings:
    Launch via Dockstore: 
    https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
 
----
 ### 2. Docker + script (this guide)    
     Best if you:
     - have access to a GPU machine
----
+
 ## Outputs
 This step produces two inputs required for SpatialFusion
 
@@ -41,7 +39,6 @@ Before running this step, you will need:
 - a GPU-enabled machine (tested with NVIDIA Tesla T4)
 - Docker installed
 
----
 
 ## 2. Gather the required files
 
@@ -55,7 +52,6 @@ Your inputs should include:
     - Request access and download from Mahmood Lab at <https://huggingface.co/MahmoodLab/UNI2-h>
 - `input_is_log_normalized`: decide whether your AnnData expression values are already log-normalized. You will pass `True` if they are already log-normalized and `False` if they are not.
 
----
 
 ## 3. Set local paths
 
@@ -80,7 +76,7 @@ LOG_NORM="False"
 Notes:
 
 - `SCGPT_WEIGHTS_DIR` should point to a directory containing `best_model.pt`, `args.json`, and `vocab.json`.
----
+
 
 ## 4. Run embedding generation
 
@@ -101,7 +97,7 @@ docker run --rm --gpus all \
     --scgpt-weights /weights/scgpt \
     --uni-weights /weights/pytorch_model.bin
 ```
----
+
 ## 5. Expected outputs
 After successful execution, you should see:
 
