@@ -11,26 +11,25 @@ These embeddings are required inputs to run SpatialFusion.
 
 GPU acceleration is highly recommended for this step.
 
-## Choose a workflow
+## Which workflow should I choose?
 There are two supported ways to generate unimodal embeddings:
-### 1. WDL workflow 
-   Best if you:
-   - do not have direct access to a GPU
-   - and/or already use a WDL-supported analysis platform (e.g., Terra) 
+### WDL workflow
+Best if you:
+- do not have direct access to a GPU
+- prefer running via a managed workflow platform (e.g., Terra) 
 
-   Launch via Dockstore: 
-   https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
+Launch via Dockstore: 
+https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
 
-### 2. Local/ self-managed GPU workflow (this guide) 
+### Local/ self-managed GPU workflow (this guide) 
 
-   Best if you:
-
-    - have access to a GPU machine
+Best if you:
+- have access to a GPU machine
 
 ---
 
 
-The remainder of this guide walks through the **Local/ self-managed GPU workflow**
+The remainder of this guide walks through the **local/ self-managed GPU workflow**
 
 ## 1. Requirements
 
