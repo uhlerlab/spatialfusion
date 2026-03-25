@@ -21,15 +21,16 @@ There are two supported ways to generate unimodal embeddings:
    Launch via Dockstore: 
    https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
 
-### 2. Docker + script (this guide) 
+### 2. Local/ self-managed GPU workflow (this guide) 
 
-    Best if you:
+   Best if you:
+
     - have access to a GPU machine
 
 ---
 
 
-The remainder of this guide walks through the **Docker + script workflow**
+The remainder of this guide walks through the **Local/ self-managed GPU workflow**
 
 ## 1. Requirements
 
