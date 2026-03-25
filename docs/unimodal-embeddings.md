@@ -2,26 +2,30 @@
 
 ## Overview
 
-The first step in the SpatialFusion workflow is to generate unimodal embeddings from:
+Before running SpatialFusion, you need to generate unimodal embeddings from:
 
 - spatial transcriptomics data → using **scGPT**
 - H&E / whole-slide images → using **UNI**
 
 These embeddings are required inputs to run SpatialFusion.
 
-GPU acceleration is highly recommended for this step.
+This step requires a GPU to run efficiently.
+
+We provide two ways to run it:
+- **no GPU** → use the WDL workflow (runs on platforms like Terra)
+- **have a GPU** → run it yourself
 
 ## Which workflow should I choose?
-There are two supported ways to generate unimodal embeddings:
+
 ### WDL workflow
 Best if you:
-- do not have direct access to a GPU
-- prefer running via a managed workflow platform (e.g., Terra) 
+- do not have access to a GPU
+- use a platform like Terra
 
 Launch via Dockstore: 
 https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info
 
-### Local/ self-managed GPU workflow (this guide) 
+### Local / self-managed GPU workflow (this guide) 
 
 Best if you:
 - have access to a GPU machine
@@ -29,7 +33,7 @@ Best if you:
 ---
 
 
-The remainder of this guide walks through the **local/ self-managed GPU workflow**
+The remainder of this guide covers the **local/ self-managed GPU workflow**
 
 ## 1. Requirements
 
