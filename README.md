@@ -251,10 +251,7 @@ Tutorial data is available on Zenodo:
 
 If you use SpatialFusion, please cite:
 
-> Broad Institute Spatial Foundation, *SpatialFusion* (2025).
-> [https://github.com/broadinstitute/spatialfusion](https://github.com/broadinstitute/spatialfusion)
-
-Full manuscript citation will be added when available.
+> Yates J, Shavakhi M, Choueiri T, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
 
 ---
 
