@@ -64,7 +64,6 @@ pip install --no-cache-dir torchtext==0.18.0 torchdata==0.9.0
 # Optional: UNI (H&E embedding model)
 pip install timm
 ```
-
 ---
 
 #### CPU-only
@@ -80,9 +79,6 @@ pip install --no-cache-dir torchtext==0.18.0 torchdata==0.9.0
 # Optional, used for UNI
 pip install timm
 ```
-
-> 💡 Replace `cu124` with the CUDA version matching your system (e.g., `cu121`).
-
 ---
 
 ### 3. Install SpatialFusion package
