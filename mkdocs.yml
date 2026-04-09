@@ -18,6 +18,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Prepare inputs: unimodal-embeddings.md
   - Installation: installation.md
   - Quick Start: quickstart.md
   - Concepts: concepts.md
