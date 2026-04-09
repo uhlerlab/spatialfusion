@@ -237,6 +237,7 @@ def ae_from_arrays(
     inputs: AEInputs,
     device: str = "cuda:0",
     combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
+    batch_size: Optional[int] = None, 
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Run a pretrained PairedAE on in-memory UNI and scGPT embeddings.
@@ -251,6 +252,7 @@ def ae_from_arrays(
         device: Torch device used for inference.
         combine_mode: Strategy for combining modality embeddings.
             One of {"average", "concat", "z1", "z2"}.
+            batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
 
     Returns:
         A tuple `(z1_df, z2_df, z_joint_df)` where:
@@ -293,24 +295,65 @@ def ae_from_arrays(
     else:
         x2_np = None
 
-    with torch.no_grad():
-        x1 = torch.from_numpy(x1_np).to(device)
+    n_samples = len(common)
+
+    # Auto-determine batch size if not provided
+    if batch_size is None:
+        est_mem_per_sample = x1_np.shape[1] * 4 * 2
         if needs_z2:
-            x2 = torch.from_numpy(x2_np).to(device)
-        else:
-            x2 = None
+            est_mem_per_sample += x2_np.shape[1] * 4 * 2
+        batch_size = max(1, int(300 * 1024 * 1024 / est_mem_per_sample))
+        batch_size = min(batch_size, 5000)
+        batch_size = max(batch_size, 100)
 
-        out = model(x1, x2)
+    if n_samples > batch_size:
+        z1_list, z2_list = [], []
 
-        z1_t = out.get("z1")
-        z2_t = out.get("z2")
-        if z1_t is None and z2_t is None:
-            raise ValueError("Model output does not contain 'z1' or 'z2'.")
+        model.eval()
+        with torch.no_grad():
+            for i in tqdm(range(0, n_samples, batch_size), desc="Processing AE in batches"):
+                end_idx = min(i + batch_size, n_samples)
 
-    z1_df = pd.DataFrame(z1_t.cpu().numpy(
-    ), index=common) if z1_t is not None else pd.DataFrame(index=common)
-    z2_df = pd.DataFrame(z2_t.cpu().numpy(
-    ), index=common) if z2_t is not None else pd.DataFrame(index=common)
+                batch_x1_np = x1_np[i:end_idx]
+                x1_batch = torch.from_numpy(batch_x1_np).to(device)
+
+                if needs_z2:
+                    batch_x2_np = x2_np[i:end_idx]
+                    x2_batch = torch.from_numpy(batch_x2_np).to(device)
+                else:
+                    x2_batch = None
+
+                out = model(x1_batch, x2_batch)
+
+                z1_t = out.get("z1")
+                z2_t = out.get("z2")
+
+                if z1_t is not None:
+                    z1_list.append(z1_t.cpu().numpy())
+                if z2_t is not None:
+                    z2_list.append(z2_t.cpu().numpy())
+
+                del x1_batch, x2_batch, out, z1_t, z2_t
+                if device.startswith("cuda"):
+                    torch.cuda.empty_cache()
+
+        z1_np = np.vstack(z1_list) if z1_list else np.array([])
+        z2_np = np.vstack(z2_list) if z2_list else np.array([])
+
+        z1_df = pd.DataFrame(z1_np, index=common) if len(z1_np) > 0 else pd.DataFrame(index=common)
+        z2_df = pd.DataFrame(z2_np, index=common) if len(z2_np) > 0 else pd.DataFrame(index=common)
+
+    else:
+        with torch.no_grad():
+            x1 = torch.from_numpy(x1_np).to(device)
+            x2 = torch.from_numpy(x2_np).to(device) if needs_z2 else None
+
+            out = model(x1, x2)
+            z1_t = out.get("z1")
+            z2_t = out.get("z2")
+
+        z1_df = pd.DataFrame(z1_t.cpu().numpy(), index=common) if z1_t is not None else pd.DataFrame(index=common)
+        z2_df = pd.DataFrame(z2_t.cpu().numpy(), index=common) if z2_t is not None else pd.DataFrame(index=common)
 
     z_joint_df = _combine_embeddings(z1_df, z2_df, combine_mode)
     return z1_df, z2_df, z_joint_df
@@ -322,6 +365,7 @@ def ae_from_disk_for_samples(
     base_path: Union[str, Path],
     device: str = "cuda:0",
     combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
+    batch_size: Optional[int] = None,
     save_dir: Optional[Union[str, Path]] = None,
 ):
     """
@@ -338,6 +382,7 @@ def ae_from_disk_for_samples(
         device: Torch device used for inference.
         combine_mode: Strategy for combining modality embeddings.
             One of {"average", "concat", "z1", "z2"}.
+        batch_size: Optional batch size for AE inference from disk.
         save_dir: Optional directory in which to save AE outputs.
 
     Returns:
@@ -347,7 +392,7 @@ def ae_from_disk_for_samples(
             - z_joint_df: Combined latent embeddings.
     """
     z1, z2, z_joint_unused, celltypes, samples = extract_embeddings_for_all_samples(
-        model, sample_list, base_path, device
+        model, sample_list, base_path, device, batch_size=batch_size
     )
     if combine_mode in {"z1", "z2"}:
         z_joint = _combine_embeddings(z1, z2, combine_mode)
@@ -467,6 +512,8 @@ def gcn_embeddings_from_joint(
     spatial_key: str = "spatial",
     celltype_key: str = "celltypes",
     k: int = 30,
+    batch_size: Optional[int] = None,
+    k_hop: int = 2,   
 ) -> pd.DataFrame:
     """
     Generate GCN embeddings from joint AE embeddings and spatial graphs.
@@ -484,6 +531,8 @@ def gcn_embeddings_from_joint(
         spatial_key: Key in AnnData.obsm containing spatial coordinates.
         celltype_key: Key in AnnData.obs containing cell type annotations.
         k: Number of neighbors for KNN graph construction.
+        batch_size: Optional batch size for GCN inference.
+        k_hop: Number of hops in the spatial graph for batching.
 
     Returns:
         DataFrame containing GCN embeddings and associated metadata.
@@ -494,7 +543,7 @@ def gcn_embeddings_from_joint(
     emb_df = extract_gcn_embeddings_with_metadata(
         gcn_model, full_graphs, ordered_samples, Path(base_path), z_joint,
         device=device, spatial_key=spatial_key, celltype_key=celltype_key,
-        adata_by_sample=adata_by_sample,
+        adata_by_sample=adata_by_sample, batch_size=batch_size, k_hop=k_hop,
     )
     return emb_df
 
@@ -524,6 +573,10 @@ def run_full_embedding(
     k: int = 30,
     celltype_key: str = "celltypes",
     combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
+
+    ae_batch_size: Optional[int] = None,
+    gcn_batch_size: Optional[int] = None,
+    k_hop: int = 2,
 
     # optional explicit input-dim inference from files for disk path mode
     uni_path: Optional[Union[str, Path]] = None,
@@ -561,6 +614,14 @@ def run_full_embedding(
         k: Number of neighbors for spatial graph construction.
         celltype_key: Key in AnnData.obs for cell type labels.
         combine_mode: Strategy for combining modality embeddings.
+        ae_batch_size: Optional batch size for AE inference.
+            If None, an effective batch size is auto-determined for AE
+            processing.
+        gcn_batch_size: Optional batch size for GCN inference.
+            If None, GCN runs full-graph inference.
+            If set, GCN uses memory-efficient subgraph batching.
+        k_hop: Number of hops for subgraph expansion during batched GCN
+            inference; used only when `gcn_batch_size` is set.
         uni_path: Optional UNI file path for dimension inference.
         scgpt_path: Optional scGPT file path for dimension inference.
         save_ae_dir: Optional directory to save AE outputs.
@@ -610,7 +671,7 @@ def run_full_embedding(
 
         for sample, inputs in ae_inputs_by_sample.items():
             z1, z2, z_joint = ae_from_arrays(
-                ae_model, inputs, device=device, combine_mode=combine_mode)
+                ae_model, inputs, device=device, combine_mode=combine_mode, batch_size=ae_batch_size)
             # collect
             z1["sample"] = sample
             z2["sample"] = sample
@@ -647,7 +708,13 @@ def run_full_embedding(
                 ae_model_path, d1_dim, d2_dim, latent_dim=latent_dim, device=device)
 
         z1_df, z2_df, z_joint_df = ae_from_disk_for_samples(
-            ae_model, sample_list, base_path, device=device, combine_mode=combine_mode, save_dir=save_ae_dir
+            ae_model,
+            sample_list,
+            base_path,
+            device=device,
+            combine_mode=combine_mode,
+            batch_size=ae_batch_size,
+            save_dir=save_ae_dir,
         )
 
         # read adatas for GCN stage
@@ -673,5 +740,7 @@ def run_full_embedding(
         spatial_key=spatial_key,
         celltype_key=celltype_key,
         k=k,
+        batch_size=gcn_batch_size,
+        k_hop=k_hop,
     )
     return emb_df

@@ -146,6 +146,7 @@ def ae_from_arrays_finetune(
     feat2: pd.DataFrame,
     adata: Optional[sc.AnnData] = None,
     device: str = "cuda:0",
+    batch_size: Optional[int] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Run a PairedAE model on in-memory feature matrices for fine-tuning.
@@ -163,6 +164,7 @@ def ae_from_arrays_finetune(
         feat2: Feature matrix for modality 2 (cells × features).
         adata: Optional AnnData object for additional index alignment.
         device: Torch device used for inference.
+        batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
 
     Returns:
         A tuple `(z1_df, z2_df, z_joint_df)` where:
@@ -192,15 +194,40 @@ def ae_from_arrays_finetune(
     std_feat1 = safe_standardize(feat1.loc[common])
     std_feat2 = safe_standardize(feat2.loc[common])
 
-    X1 = torch.tensor(std_feat1.values, dtype=torch.float32, device=device)
-    X2 = torch.tensor(std_feat2.values, dtype=torch.float32, device=device)
+    X1_np = std_feat1.values.astype(np.float32)
+    X2_np = std_feat2.values.astype(np.float32)
 
-    # --- Encode using the PairedAE encoders directly (no recon loss)
+    n_samples = X1_np.shape[0]
+
+    # Auto batch size if not provided
+    if batch_size is None:
+        est_mem_per_sample = (X1_np.shape[1] + X2_np.shape[1]) * 4 * 2
+        batch_size = max(1, int(300 * 1024 * 1024 / est_mem_per_sample))
+        batch_size = min(batch_size, 5000)
+        batch_size = max(batch_size, 100)
+
+    z1_list, z2_list = [], []
+
     model.eval()
     with torch.no_grad():
-        z1 = model.encoder1(X1).cpu().numpy()
-        z2 = model.encoder2(X2).cpu().numpy()
+        for i in tqdm(range(0, n_samples, batch_size), desc="Encoding AE", leave=False):
+            end = min(i + batch_size, n_samples)
 
+            x1_batch = torch.from_numpy(X1_np[i:end]).to(device)
+            x2_batch = torch.from_numpy(X2_np[i:end]).to(device)
+
+            z1_batch = model.encoder1(x1_batch)
+            z2_batch = model.encoder2(x2_batch)
+
+            z1_list.append(z1_batch.cpu().numpy())
+            z2_list.append(z2_batch.cpu().numpy())
+
+            del x1_batch, x2_batch, z1_batch, z2_batch
+            if str(device).startswith("cuda"):
+                torch.cuda.empty_cache()
+
+    z1 = np.vstack(z1_list)
+    z2 = np.vstack(z2_list)
     # --- Combine
     z_joint = (z1 + z2) / 2.0
 
