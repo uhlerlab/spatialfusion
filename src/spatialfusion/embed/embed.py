@@ -655,8 +655,8 @@ def run_full_embedding(
             # load temporarily to inspect expected input dim
             tmp_state = torch.load(ae_model_path, map_location="cpu")
             # encoder2 layers always start with a weight of shape (latent_dim, d2_dim)
-            for k, v in tmp_state.items():
-                if k.startswith("encoder2.model.0.weight"):   # first Linear layer
+            for key, v in tmp_state.items():
+                if key.startswith("encoder2.model.0.weight"):   # first Linear layer
                     d2_dim = v.shape[1]
                     break
 
