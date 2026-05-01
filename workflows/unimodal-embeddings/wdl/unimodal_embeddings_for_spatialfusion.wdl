@@ -6,7 +6,7 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     # Shared inputs. Mode-specific files are optional at the workflow boundary so
     # scGPT-only and UNI-only runs do not require dummy files.
     File adata
-    Boolean input_is_log_normalized
+    Boolean? input_is_log_normalized
     File? wsi
     File? uni_weights
 
@@ -31,7 +31,7 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     adata: "Primary input. AnnData (.h5ad) used for scGPT embeddings and for the spatial coordinates consumed by UNI. Spatial coordinates are expected in adata.obsm['spatial']."
     wsi: "Required when embedding_mode is 'uni' or 'both'. Whole-slide image / H&E TIFF used to generate UNI image embeddings. TIFF / OME-TIFF format is expected."
     uni_weights: "Required when embedding_mode is 'uni' or 'both'. UNI model weights file used for UNI image embeddings."
-    input_is_log_normalized: "Primary input. Set to true if the selected AnnData expression layer is already log-normalized."
+    input_is_log_normalized: "Required when embedding_mode is 'scgpt' or 'both'. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
     scgpt_weights: "scGPT weights archive. Defaults to a VA lab gs:// path derived from the figshare demo weights released with the zero-shot foundation model evaluation dataset. External users can override this with their own gs:// archive containing best_model.pt, args.json, and vocab.json."
     scgpt_mem_gb: "Optional runtime override for scGPT task memory in GB. Default is 8 GB."
@@ -46,7 +46,7 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     call RunScgptEmbedding {
       input:
         adata = adata,
-        input_is_log_normalized = input_is_log_normalized,
+        input_is_log_normalized = select_first([input_is_log_normalized]),
         scgpt_weights = select_first([scgpt_weights]),
         scgpt_mem_gb = scgpt_mem_gb,
         cpu_cores = cpu_cores,
