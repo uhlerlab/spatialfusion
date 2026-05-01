@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -249,6 +249,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../unimodal-embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../installation/" class="md-nav__link">
         
   
@@ -394,10 +421,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
             
   
   
@@ -415,8 +442,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -673,10 +700,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#spatialfusion.utils.embed_gcn_utils.expand_k_hop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        expand_k_hop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#spatialfusion.utils.embed_gcn_utils.extract_gcn_embeddings_with_metadata" class="md-nav__link">
     <span class="md-ellipsis">
       
         extract_gcn_embeddings_with_metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spatialfusion.utils.embed_gcn_utils.infer_output_dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_output_dim
       
     </span>
   </a>
@@ -798,10 +847,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#spatialfusion.utils.embed_gcn_utils.expand_k_hop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        expand_k_hop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#spatialfusion.utils.embed_gcn_utils.extract_gcn_embeddings_with_metadata" class="md-nav__link">
     <span class="md-ellipsis">
       
         extract_gcn_embeddings_with_metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spatialfusion.utils.embed_gcn_utils.infer_output_dim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_output_dim
       
     </span>
   </a>
@@ -850,7 +921,8 @@
 
         <p>Utility functions for extracting GCN embeddings and metadata for downstream analysis.</p>
 <p>This module provides:
-- extract_gcn_embeddings_with_metadata: Extracts GCN embeddings and merges with cell type, spatial, and ligand-receptor metadata.</p>
+- extract_gcn_embeddings_with_metadata: Extracts GCN embeddings and merges with cell type,
+  spatial, and ligand-receptor metadata. Supports both full-graph and batched subgraph inference.</p>
 
 
 
@@ -875,16 +947,137 @@
 <div class="doc doc-object doc-function">
 
 
-<h3 id="spatialfusion.utils.embed_gcn_utils.extract_gcn_embeddings_with_metadata" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">extract_gcn_embeddings_with_metadata</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">z_joint</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">adata_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+<h3 id="spatialfusion.utils.embed_gcn_utils.expand_k_hop" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">expand_k_hop</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">seeds</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span></code>
 
 </h3>
 
 
     <div class="doc doc-contents ">
 
-        <p>Extracts GCN embeddings along with metadata such as spatial coordinates and cell types.
-Supports both in-memory AnnData inputs and on-disk loading via base_path.</p>
+        <p>Expand a set of seed nodes to include all nodes reachable within k hops.</p>
+<p>This function performs exact k-hop expansion for both incoming and outgoing
+edges and is used for memory-efficient subgraph inference.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>g</code>
+            </td>
+            <td>
+                  <code><span title="dgl.DGLGraph">DGLGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Input graph.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seeds</code>
+            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Tensor of seed node indices.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>k</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of hops.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>torch.Tensor:
+Sorted tensor of expanded node indices.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="spatialfusion.utils.embed_gcn_utils.extract_gcn_embeddings_with_metadata" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extract_gcn_embeddings_with_metadata</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">z_joint</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">adata_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k_hop</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract GCN embeddings along with metadata such as spatial coordinates and cell types.</p>
+<p>This function supports two inference modes:</p>
+<ul>
+<li>
+<p><strong>Full-graph inference</strong> (default, exact behavior):
+  If <code>batch_size</code> is None, the entire graph is moved to the device and
+  processed in a single forward pass.</p>
+</li>
+<li>
+<p><strong>Batched subgraph inference</strong> (memory-efficient):
+  If <code>batch_size</code> is an integer, nodes are processed in batches.
+  For each batch of seed nodes, a k-hop subgraph is constructed to
+  preserve exact receptive fields for multi-layer GCNs.</p>
+</li>
+</ul>
+<p>Supports both in-memory AnnData inputs and on-disk loading via <code>base_path</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -907,7 +1100,7 @@ Supports both in-memory AnnData inputs and on-disk loading via base_path.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Trained GCN model with an <code>encode</code> method that takes (graph, features) as input.</p>
+                <p>Trained GCN model with an <code>encode(graph, features)</code> method.</p>
               </div>
             </td>
             <td>
@@ -923,7 +1116,7 @@ Supports both in-memory AnnData inputs and on-disk loading via base_path.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>List of DGL graphs, one per sample, containing node features in <code>ndata['feat']</code>.</p>
+                <p>List of DGL graphs, one per sample, containing node features in <code>ndata["feat"]</code>.</p>
               </div>
             </td>
             <td>
@@ -955,8 +1148,8 @@ Supports both in-memory AnnData inputs and on-disk loading via base_path.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Root directory containing per-sample subdirectories. Used only if <code>adata_by_sample</code>
-is not provided.</p>
+                <p>Root directory containing per-sample subdirectories.
+Used only if <code>adata_by_sample</code> is not provided.</p>
               </div>
             </td>
             <td>
@@ -972,7 +1165,8 @@ is not provided.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Joint embeddings from the autoencoder step. Used to align indices.</p>
+                <p>Joint embeddings from the autoencoder step.
+Used to align graph nodes with cell identifiers.</p>
               </div>
             </td>
             <td>
@@ -988,7 +1182,7 @@ is not provided.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Device string (e.g., <code>'cuda:0'</code> or <code>'cpu'</code>) for model inference.</p>
+                <p>Device string for inference (e.g., <code>"cuda:0"</code> or <code>"cpu"</code>).</p>
               </div>
             </td>
             <td>
@@ -1020,7 +1214,7 @@ is not provided.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Column name in <code>adata.obs</code> or celltypes.csv for cell type annotation.</p>
+                <p>Column name in <code>adata.obs</code> or <code>celltypes.csv</code> for cell type annotation.</p>
               </div>
             </td>
             <td>
@@ -1036,12 +1230,46 @@ is not provided.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional mapping from sample IDs to AnnData objects already loaded in memory.
+                <p>Optional mapping from sample IDs to preloaded AnnData objects.
 If provided, this takes precedence over disk loading.</p>
               </div>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of seed nodes per subgraph batch.
+If None, full-graph inference is used.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>k_hop</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of hops for subgraph expansion when batching.
+Should match the effective receptive field of the GCN.</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
             </td>
           </tr>
       </tbody>
@@ -1064,11 +1292,138 @@ If provided, this takes precedence over disk loading.</p>
             <td>
               <div class="doc-md-description">
                 <p>pd.DataFrame:
-A concatenated DataFrame of GCN embeddings across all samples, including metadata:
-- sample_id, cell_id
-- celltype (and optional subtype/niche labels)
-- spatial coordinates (X_coord, Y_coord)
-- optional ligand–receptor features if present</p>
+Concatenated DataFrame of GCN embeddings across all samples,
+including metadata:</p>
+<ul>
+<li>sample_id</li>
+<li>cell_id</li>
+<li>celltype (and optional subtype/niche labels)</li>
+<li>spatial coordinates (X_coord, Y_coord)</li>
+<li>optional ligand–receptor features if present</li>
+</ul>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If AnnData cannot be loaded from memory or disk.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If graph node count does not match aligned cell identifiers.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="spatialfusion.utils.embed_gcn_utils.infer_output_dim" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">infer_output_dim</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">feat_dim</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Infer the output dimensionality of a GCN encoder.</p>
+<p>This function runs a dummy forward pass through <code>model.encode</code>
+using a single-node graph to determine the latent output size.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>model</code>
+            </td>
+            <td>
+                  <code><span title="torch.nn.Module">Module</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>GCN model with an <code>encode</code> method.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>feat_dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Input feature dimensionality.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>int</code></td>            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Output embedding dimensionality.</p>
               </div>
             </td>
           </tr>

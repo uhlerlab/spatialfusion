@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -249,6 +249,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../unimodal-embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../installation/" class="md-nav__link">
         
   
@@ -402,10 +429,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
             
   
   
@@ -423,8 +450,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -734,17 +761,17 @@
 <p>A minimal example showing how to embed a dataset using the pretrained AE and GCN:</p>
 <pre><code class="language-python">from spatialfusion.embed.embed import AEInputs, run_full_embedding
 import pandas as pd
-import pathlib as pl
+import scanpy as sc
 
 # Load external embeddings (UNI + scGPT)
 uni_df = pd.read_parquet('UNI.parquet')
 scgpt_df = pd.read_parquet('scGPT.parquet')
 
-# Paths to pretrained models
-ae_model_dir = pl.Path('../data/checkpoint_dir_ae/')
-gcn_model_dir = pl.Path('../data/checkpoint_dir_gcn/')
+# Load AnnData object
+adata = sc.read_h5ad(&quot;object.h5ad&quot;)
 
 # Mapping sample_name -&gt; AEInputs
+sample_name = 'sample1'
 ae_inputs_by_sample = {
     sample_name: AEInputs(
         adata=adata,
@@ -756,9 +783,7 @@ ae_inputs_by_sample = {
 # Run the multimodal embedding pipeline
 emb_df = run_full_embedding(
     ae_inputs_by_sample=ae_inputs_by_sample,
-    ae_model_path=ae_model_dir / &quot;spatialfusion-multimodal-ae.pt&quot;,
-    gcn_model_path=gcn_model_dir / &quot;spatialfusion-full-gcn.pt&quot;,
-    device=&quot;cuda:0&quot;,
+    device=&quot;cuda:0&quot;, # if cpu, &quot;cpu&quot;
     combine_mode=&quot;average&quot;,
     spatial_key='spatial',
     celltype_key='major_celltype',

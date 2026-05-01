@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -249,6 +249,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../unimodal-embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../installation/" class="md-nav__link">
         
   
@@ -394,10 +421,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
             
   
   
@@ -415,8 +442,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1048,7 +1075,7 @@
 
 
 <h3 id="spatialfusion.finetune.finetune.ae_from_arrays_finetune" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ae_from_arrays_finetune</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">feat1</span><span class="p">,</span> <span class="n">feat2</span><span class="p">,</span> <span class="n">adata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">ae_from_arrays_finetune</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">feat1</span><span class="p">,</span> <span class="n">feat2</span><span class="p">,</span> <span class="n">adata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1152,6 +1179,22 @@ extraction:
             </td>
             <td>
                   <code>&#39;cuda:0&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2324,7 +2367,8 @@ using either disk-based inputs or fully preloaded data.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to pretrained AE checkpoint.</p>
+                <p>Path to pretrained AE checkpoint.
+If omitted, the packaged pretrained AE checkpoint is used.</p>
               </div>
             </td>
             <td>
@@ -2340,7 +2384,8 @@ using either disk-based inputs or fully preloaded data.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to pretrained GCN checkpoint.</p>
+                <p>Path to pretrained GCN checkpoint.
+If omitted, the packaged pretrained GCN checkpoint is used.</p>
               </div>
             </td>
             <td>

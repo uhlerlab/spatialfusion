@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -249,6 +249,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../unimodal-embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prepare inputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../installation/" class="md-nav__link">
         
   
@@ -394,10 +421,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
             
   
   
@@ -415,8 +442,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1285,7 +1312,7 @@ each containing spatial coordinates and metadata.</p>
 
 
 <h3 id="spatialfusion.embed.embed.ae_from_arrays" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ae_from_arrays</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">ae_from_arrays</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1372,7 +1399,8 @@ resulting latent representations according to <code>combine_mode</code>.</p>
             <td>
               <div class="doc-md-description">
                 <p>Strategy for combining modality embeddings.
-One of {"average", "concat", "z1", "z2"}.</p>
+One of {"average", "concat", "z1", "z2"}.
+batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.</p>
               </div>
             </td>
             <td>
@@ -1452,7 +1480,7 @@ are found between AnnData and embeddings.</p>
 
 
 <h3 id="spatialfusion.embed.embed.ae_from_disk_for_samples" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ae_from_disk_for_samples</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">ae_from_disk_for_samples</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1559,6 +1587,22 @@ One of {"average", "concat", "z1", "z2"}.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for AE inference from disk.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>save_dir</code>
             </td>
             <td>
@@ -1610,7 +1654,7 @@ One of {"average", "concat", "z1", "z2"}.</p>
 
 
 <h3 id="spatialfusion.embed.embed.gcn_embeddings_from_joint" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">gcn_embeddings_from_joint</span><span class="p">(</span><span class="n">gcn_model</span><span class="p">,</span> <span class="n">z_joint</span><span class="p">,</span> <span class="n">adata_by_sample</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial&#39;</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">gcn_embeddings_from_joint</span><span class="p">(</span><span class="n">gcn_model</span><span class="p">,</span> <span class="n">z_joint</span><span class="p">,</span> <span class="n">adata_by_sample</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial&#39;</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k_hop</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1760,6 +1804,38 @@ metadata.</p>
             </td>
             <td>
                   <code>30</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for GCN inference.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>k_hop</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of hops in the spatial graph for batching.</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
             </td>
           </tr>
       </tbody>
@@ -2395,7 +2471,7 @@ metadata.</p>
 
 
 <h3 id="spatialfusion.embed.embed.run_full_embedding" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">run_full_embedding</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">ae_inputs_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">uni_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scgpt_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_ae_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">run_full_embedding</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">ae_inputs_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">ae_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k_hop</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">uni_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scgpt_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_ae_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2486,7 +2562,8 @@ metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to AE checkpoint (if AE model not provided).</p>
+                <p>Path to AE checkpoint (if AE model not provided).
+If omitted, the packaged pretrained AE checkpoint is used.</p>
               </div>
             </td>
             <td>
@@ -2502,7 +2579,8 @@ metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Path to GCN checkpoint (if GCN model not provided).</p>
+                <p>Path to GCN checkpoint (if GCN model not provided).
+If omitted, the packaged pretrained GCN checkpoint is used.</p>
               </div>
             </td>
             <td>
@@ -2635,6 +2713,59 @@ metadata.</p>
             </td>
             <td>
                   <code>&#39;average&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ae_batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for AE inference.
+If None, an effective batch size is auto-determined for AE
+processing.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>gcn_batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for GCN inference.
+If None, GCN runs full-graph inference.
+If set, GCN uses memory-efficient subgraph batching.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>k_hop</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of hops for subgraph expansion during batched GCN
+inference; used only when <code>gcn_batch_size</code> is set.</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
             </td>
           </tr>
           <tr class="doc-section-item">
