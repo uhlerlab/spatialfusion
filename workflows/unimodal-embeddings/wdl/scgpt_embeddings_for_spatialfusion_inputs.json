@@ -1,0 +1,4 @@
+{
+  "GenerateScgptEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
+  "GenerateScgptEmbeddingsForSpatialFusion.input_is_log_normalized": "${?}"
+}

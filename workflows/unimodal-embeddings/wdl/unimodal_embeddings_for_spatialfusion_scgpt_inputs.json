@@ -1,5 +1,0 @@
-{
-  "GenerateUnimodalEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
-  "GenerateUnimodalEmbeddingsForSpatialFusion.input_is_log_normalized": "${?}",
-  "GenerateUnimodalEmbeddingsForSpatialFusion.embedding_mode": "scgpt"
-}
