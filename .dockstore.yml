@@ -7,3 +7,5 @@ workflows:
     readMePath: /workflows/unimodal-embeddings/wdl/README.md
     testParameterFiles:
       - /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion_inputs.json
+      - /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion_scgpt_inputs.json
+      - /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion_uni_inputs.json
