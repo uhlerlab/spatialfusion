@@ -16,7 +16,7 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     Int? disk_gb
     Int? preemptible_tries
 
-    String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:v0.2"
+    String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:workflow-0.2"
   }
 
   parameter_meta {

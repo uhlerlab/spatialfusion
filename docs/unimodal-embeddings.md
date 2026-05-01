@@ -61,7 +61,7 @@ scGPT weights are bundled in the Docker image.
 Pull the public Docker image:
 
 ```bash
-docker pull vanallenlab/unimodal-embeddings:v0.2
+docker pull vanallenlab/unimodal-embeddings:workflow-0.2
 ```
 
 Set local path variables (absolute paths):
@@ -85,7 +85,7 @@ docker run --rm --gpus all \
   -v "$WSI":/inputs/image.ome.tif \
   -v "$UNI_WEIGHTS":/weights/pytorch_model.bin \
   -v "$OUTPUT_DIR":/out \
-  vanallenlab/unimodal-embeddings:v0.2 \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
   python /app/unimodal-embeddings.py \
     --mode both \
     --adata /inputs/object.h5ad \
@@ -102,7 +102,7 @@ docker run --rm --gpus all \
 docker run --rm --gpus all \
   -v "$ADATA":/inputs/object.h5ad \
   -v "$OUTPUT_DIR":/out \
-  vanallenlab/unimodal-embeddings:v0.2 \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
   python /app/unimodal-embeddings.py \
     --mode scgpt \
     --adata /inputs/object.h5ad \
@@ -119,7 +119,7 @@ docker run --rm --gpus all \
   -v "$WSI":/inputs/image.ome.tif \
   -v "$UNI_WEIGHTS":/weights/pytorch_model.bin \
   -v "$OUTPUT_DIR":/out \
-  vanallenlab/unimodal-embeddings:v0.2 \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
   python /app/unimodal-embeddings.py \
     --mode uni \
     --adata /inputs/object.h5ad \
