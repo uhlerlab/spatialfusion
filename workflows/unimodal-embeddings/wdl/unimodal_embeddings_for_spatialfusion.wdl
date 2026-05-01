@@ -13,9 +13,6 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     # Mode selection input. Most users will leave this as "both".
     String embedding_mode = "both"  # Allowed values: "scgpt", "uni", "both"
 
-    # scGPT weights in VA lab unstructured storage bucket.
-    File? scgpt_weights = "gs://fc-d0a0b6ac-b16f-47ca-99eb-49d88a2ba4c2/scgpt_weights/scgpt_weights.tar.gz"
-
     # Optional runtime overrides. By default, this workflow requests 8 GB for scGPT,
     # 14 GB for UNI, and 2 CPU cores for both modes.
     Float? scgpt_mem_gb
@@ -33,7 +30,6 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
     uni_weights: "Required when embedding_mode is 'uni' or 'both'. UNI model weights file used for UNI image embeddings."
     input_is_log_normalized: "Required when embedding_mode is 'scgpt' or 'both'. Set to true if the selected AnnData expression layer is already log-normalized."
     embedding_mode: "Which embeddings to generate: 'scgpt', 'uni', or 'both'. Defaults to 'both' for the common use case."
-    scgpt_weights: "scGPT weights archive. Defaults to a VA lab gs:// path derived from the figshare demo weights released with the zero-shot foundation model evaluation dataset. External users can override this with their own gs:// archive containing best_model.pt, args.json, and vocab.json."
     scgpt_mem_gb: "Optional runtime override for scGPT task memory in GB. Default is 8 GB."
     uni_mem_gb: "Optional runtime override for UNI task memory in GB. Default is 14 GB."
     cpu_cores: "Optional runtime override for CPU cores requested by each task. Default is 2."
@@ -47,7 +43,6 @@ workflow GenerateUnimodalEmbeddingsForSpatialFusion {
       input:
         adata = adata,
         input_is_log_normalized = select_first([input_is_log_normalized]),
-        scgpt_weights = select_first([scgpt_weights]),
         scgpt_mem_gb = scgpt_mem_gb,
         cpu_cores = cpu_cores,
         disk_gb = disk_gb,
@@ -81,8 +76,6 @@ task RunScgptEmbedding {
   input {
     File adata
     Boolean input_is_log_normalized
-
-    File scgpt_weights
 
     Int n_hvg = 1200
     Int scgpt_batch_size = 16
@@ -123,20 +116,16 @@ task RunScgptEmbedding {
   Float mem_gb = select_first([scgpt_mem_gb, 8.0])
   Int task_cpu_cores = select_first([cpu_cores, 2])
   Int task_preemptible_tries = select_first([preemptible_tries, 0])
-  Int default_disk_gb = ceil(size(adata, "GB") + size(scgpt_weights, "GB") + 20)
+  Int default_disk_gb = ceil(size(adata, "GB") + 20)
 
   command <<<
     set -eu -o pipefail
-
-    # The Python CLI expects a directory for scGPT weights, so unpack the archive first.
-    mkdir -p scgpt_weights
-    tar -xzf "~{scgpt_weights}" -C scgpt_weights --strip-components=1
 
     python /app/unimodal-embeddings.py \
       --mode scgpt \
       --adata "~{adata}" \
       --output-dir "." \
-      --scgpt-weights "scgpt_weights" \
+      --scgpt-weights "/app/scgpt_weights" \
       --input-is-log-normalized ~{if (input_is_log_normalized) then "True" else "False"} \
       --n-hvg ~{n_hvg} \
       --scgpt-batch-size ~{scgpt_batch_size} \
