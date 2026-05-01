@@ -1,7 +1,7 @@
 {
   "GenerateUnimodalEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
-  "GenerateUnimodalEmbeddingsForSpatialFusion.input_is_log_normalized": "${?}",
-  "GenerateUnimodalEmbeddingsForSpatialFusion.embedding_mode": "both",
+  "GenerateUnimodalEmbeddingsForSpatialFusion.input_is_log_normalized": false,
+  "GenerateUnimodalEmbeddingsForSpatialFusion.embedding_mode": "uni",
   "GenerateUnimodalEmbeddingsForSpatialFusion.wsi": "gs://YOUR_BUCKET/path/to/wsi.ome.tif",
   "GenerateUnimodalEmbeddingsForSpatialFusion.uni_weights": "gs://YOUR_BUCKET/path/to/pytorch_model.bin"
 }
