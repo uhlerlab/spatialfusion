@@ -199,7 +199,6 @@ task RunUniEmbedding {
       --wsi "~{wsi}" \
       --output-dir "." \
       --uni-weights "~{uni_weights}" \
-      --input-is-log-normalized False \
       --uni-batch-size ~{uni_batch_size} \
       --spatial-key "~{spatial_key}" \
       --uni-output-name "~{uni_output_name}" \

@@ -282,7 +282,7 @@ def parse_args() -> argparse.Namespace:
     scgpt.add_argument(
         "--input-is-log-normalized",
         choices=["True", "False"],
-        required=True,
+        default=None,
         help="Whether the selected layer is already log-normalized.",
     )
     scgpt.add_argument(
@@ -359,11 +359,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    log_norm = args.input_is_log_normalized == "True"
 
     if args.mode in {"scgpt", "both"}:
         if args.scgpt_weights is None:
             raise ValueError("--scgpt-weights is required when mode is 'scgpt' or 'both'.")
+        if args.input_is_log_normalized is None:
+            raise ValueError("--input-is-log-normalized is required when mode is 'scgpt' or 'both'.")
+        log_norm = args.input_is_log_normalized == "True"
         scfoundation_dir = args.scfoundation_dir
         if scfoundation_dir is None:
             if DEFAULT_SCFOUNDATION_DIR.exists():
