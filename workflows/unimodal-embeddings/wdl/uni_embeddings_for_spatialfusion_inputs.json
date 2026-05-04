@@ -1,0 +1,5 @@
+{
+  "GenerateUniEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
+  "GenerateUniEmbeddingsForSpatialFusion.wsi": "gs://YOUR_BUCKET/path/to/wsi.ome.tif",
+  "GenerateUniEmbeddingsForSpatialFusion.uni_weights": "gs://YOUR_BUCKET/path/to/pytorch_model.bin"
+}

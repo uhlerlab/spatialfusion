@@ -55,3 +55,6 @@ RUN git clone https://github.com/microsoft/zero-shot-scfoundation.git /app/zero-
 # Copy the workflow entry script into a fixed in-image location.
 # Input data, model weights, and outputs are expected to be provided at runtime.
 COPY scripts/unimodal-embeddings.py /app/unimodal-embeddings.py
+
+# scGPT weights used by the WDL.
+COPY weights/scgpt/ /app/scgpt_weights/
