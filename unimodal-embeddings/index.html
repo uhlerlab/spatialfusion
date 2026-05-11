@@ -400,6 +400,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="4. Run embedding generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-both-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run both embeddings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-only-scgpt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run only scGPT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-only-uni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run only UNI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -990,6 +1029,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="4. Run embedding generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-both-embeddings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run both embeddings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-only-scgpt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run only scGPT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-only-uni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run only UNI
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1049,8 +1127,12 @@
 <li>do not have access to a GPU</li>
 <li>use a platform like Terra</li>
 </ul>
-<p>Launch via Dockstore: 
-<a href="https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info">https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info</a></p>
+<p>Launch via Dockstore:</p>
+<ul>
+<li>Both scGPT and UNI embeddings: <a href="https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info">https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/unimodal-embeddings-for-spatialfusion:main?tab=info</a></li>
+<li>scGPT embeddings: <a href="https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/scgpt-embeddings-for-spatialfusion:main?tab=info">https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/scgpt-embeddings-for-spatialfusion:main?tab=info</a></li>
+<li>UNI embeddings: <a href="https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/uni-embeddings-for-spatialfusion:main?tab=info">https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/uni-embeddings-for-spatialfusion:main?tab=info</a></li>
+</ul>
 <h3 id="local-self-managed-gpu-workflow-this-guide">Local / self-managed GPU workflow (this guide)</h3>
 <p>Best if you:</p>
 <ul>
@@ -1069,52 +1151,70 @@
 <ul>
 <li><code>adata</code>: AnnData (<code>.h5ad</code>) used for scGPT embeddings and for the spatial coordinates consumed by UNI. Spatial coordinates are expected in <code>adata.obsm["spatial"]</code>.</li>
 <li><code>wsi</code>: whole-slide image / H&amp;E TIFF used to generate UNI image embeddings. TIFF / OME-TIFF format is expected.</li>
-<li><code>scgpt_weights</code>: a directory containing <code>best_model.pt</code>, <code>args.json</code>, and <code>vocab.json</code>.<ul>
-<li>Download from <a href="https://doi.org/10.6084/m9.figshare.24747228">https://doi.org/10.6084/m9.figshare.24747228</a></li>
-</ul>
-</li>
 <li><code>uni_weights</code>: the UNI model weights file <code>pytorch_model.bin</code>.<ul>
 <li>Request access and download from Mahmood Lab at <a href="https://huggingface.co/MahmoodLab/UNI2-h">https://huggingface.co/MahmoodLab/UNI2-h</a></li>
 </ul>
 </li>
 <li><code>input_is_log_normalized</code>: decide whether your AnnData expression values are already log-normalized. You will pass <code>True</code> if they are already log-normalized and <code>False</code> if they are not.</li>
 </ul>
+<p>scGPT weights are bundled in the Docker image.</p>
 <h2 id="3-set-local-paths">3. Set local paths</h2>
 <p>Pull the public Docker image:</p>
-<pre><code class="language-bash">docker pull vanallenlab/unimodal-embeddings:v0.1
+<pre><code class="language-bash">docker pull vanallenlab/unimodal-embeddings:workflow-0.2
 </code></pre>
 <p>Set local path variables (absolute paths):</p>
 <pre><code class="language-bash">ADATA=/absolute/path/to/object.h5ad
 WSI=/absolute/path/to/image.ome.tif
-SCGPT_WEIGHTS_DIR=/absolute/path/to/scgpt
 UNI_WEIGHTS=/absolute/path/to/pytorch_model.bin
 OUTPUT_DIR=/absolute/path/to/output
 # Depends on your data
 LOG_NORM=&quot;False&quot;
 </code></pre>
-<p>Notes:</p>
-<ul>
-<li><code>SCGPT_WEIGHTS_DIR</code> should point to a directory containing <code>best_model.pt</code>, <code>args.json</code>, and <code>vocab.json</code>.</li>
-</ul>
 <h2 id="4-run-embedding-generation">4. Run embedding generation</h2>
+<h3 id="run-both-embeddings">Run both embeddings</h3>
 <pre><code class="language-bash">docker run --rm --gpus all \
   -v &quot;$ADATA&quot;:/inputs/object.h5ad \
   -v &quot;$WSI&quot;:/inputs/image.ome.tif \
-  -v &quot;$SCGPT_WEIGHTS_DIR&quot;:/weights/scgpt \
   -v &quot;$UNI_WEIGHTS&quot;:/weights/pytorch_model.bin \
   -v &quot;$OUTPUT_DIR&quot;:/out \
-  vanallenlab/unimodal-embeddings:v0.1 \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
   python /app/unimodal-embeddings.py \
     --mode both \
     --adata /inputs/object.h5ad \
     --input-is-log-normalized &quot;$LOG_NORM&quot; \
     --wsi /inputs/image.ome.tif \
     --output-dir /out \
-    --scgpt-weights /weights/scgpt \
+    --scgpt-weights /app/scgpt_weights \
+    --uni-weights /weights/pytorch_model.bin
+</code></pre>
+<h3 id="run-only-scgpt">Run only scGPT</h3>
+<pre><code class="language-bash">docker run --rm --gpus all \
+  -v &quot;$ADATA&quot;:/inputs/object.h5ad \
+  -v &quot;$OUTPUT_DIR&quot;:/out \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
+  python /app/unimodal-embeddings.py \
+    --mode scgpt \
+    --adata /inputs/object.h5ad \
+    --input-is-log-normalized &quot;$LOG_NORM&quot; \
+    --output-dir /out \
+    --scgpt-weights /app/scgpt_weights
+</code></pre>
+<h3 id="run-only-uni">Run only UNI</h3>
+<pre><code class="language-bash">docker run --rm --gpus all \
+  -v &quot;$ADATA&quot;:/inputs/object.h5ad \
+  -v &quot;$WSI&quot;:/inputs/image.ome.tif \
+  -v &quot;$UNI_WEIGHTS&quot;:/weights/pytorch_model.bin \
+  -v &quot;$OUTPUT_DIR&quot;:/out \
+  vanallenlab/unimodal-embeddings:workflow-0.2 \
+  python /app/unimodal-embeddings.py \
+    --mode uni \
+    --adata /inputs/object.h5ad \
+    --wsi /inputs/image.ome.tif \
+    --output-dir /out \
     --uni-weights /weights/pytorch_model.bin
 </code></pre>
 <h2 id="5-expected-outputs">5. Expected outputs</h2>
-<p>After successful execution, you should see:</p>
+<p>After successful execution, you should see the output file for the mode you ran:</p>
 <pre><code>$OUTPUT_DIR/
   ├── scGPT.parquet
   └── UNI.parquet
@@ -1123,7 +1223,7 @@ LOG_NORM=&quot;False&quot;
 <ul>
 <li>This guide covers the most common use case with minimal inputs</li>
 <li>Additional optional parameters are available, see
-<a href="https://github.com/uhlerlab/spatialfusion/blob/mkdocs-update/workflows/unimodal-embeddings/scripts/unimodal-embeddings.py#L208"><code>unimodal-embeddings.py</code></a></li>
+<a href="https://github.com/uhlerlab/spatialfusion/blob/main/workflows/unimodal-embeddings/scripts/unimodal-embeddings.py"><code>unimodal-embeddings.py</code></a></li>
 </ul>
 
 
