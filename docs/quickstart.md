@@ -25,12 +25,16 @@ ae_inputs_by_sample = {
 }
 
 # Run the multimodal embedding pipeline
+# spatial_key: key in adata.obsm holding X/Y coordinates — set to match your AnnData
+#   (e.g. check with list(adata.obsm.keys()))
+# celltype_key: key in adata.obs holding cell type labels — set to match your AnnData
+#   (e.g. check with adata.obs.columns.tolist())
 emb_df = run_full_embedding(
     ae_inputs_by_sample=ae_inputs_by_sample,
     device="cuda:0", # if cpu, "cpu"
     combine_mode="average",
-    spatial_key='spatial',
-    celltype_key='major_celltype',
+    spatial_key='spatial_px',
+    celltype_key='celltypes',
     save_ae_dir=None,  # optional
 )
 ```

@@ -1,0 +1,1374 @@
+## Changed files
+ src/spatialfusion/embed/embed.py          |  60 ++--
+ src/spatialfusion/finetune/finetune.py    |   2 +-
+ src/spatialfusion/models/gcn.py           | 170 ++++++++-
+ src/spatialfusion/models/multi_ae.py      |   2 +-
+ src/spatialfusion/utils/ae_data_loader.py | 182 ++++++++--
+ src/spatialfusion/utils/embed_ae_utils.py | 571 +++++++++++++++++++++++-------
+ src/spatialfusion/utils/gcn_utils.py      |   2 +-
+ 7 files changed, 783 insertions(+), 206 deletions(-)
+
+## Full diff
+diff --git a/src/spatialfusion/embed/embed.py b/src/spatialfusion/embed/embed.py
+index 36b2477..1a643ef 100755
+--- a/src/spatialfusion/embed/embed.py
++++ b/src/spatialfusion/embed/embed.py
+@@ -41,7 +41,7 @@ DEFAULT_AE_CKPT_RELPATH = "spatialfusion-multimodal-ae.pt"
+ DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-full-gcn.pt"
+ 
+ 
+-def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2"]) -> pd.DataFrame:
++def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2", "gated"]) -> pd.DataFrame:
+     """
+     Combine two embedding matrices according to a specified mode.
+ 
+@@ -57,9 +57,9 @@ def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["avera
+         ValueError: If the mode is invalid or embeddings are incompatible.
+     """
+     mode = mode.lower()
+-    if mode not in {"average", "concat", "z1", "z2"}:
++    if mode not in {"average", "concat", "z1", "z2", "gated"}:
+         raise ValueError(
+-            "combine_mode must be one of: 'average', 'concat', 'z1', 'z2'")
++            "combine_mode must be one of: 'average', 'concat', 'z1', 'z2', 'gated'")
+     if mode == "z1":
+         return z1.copy()
+     if mode == "z2":
+@@ -72,7 +72,7 @@ def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["avera
+     z1c = z1.loc[common_idx]
+     z2c = z2.loc[common_idx]
+ 
+-    if mode == "concat":
++    if mode in ["concat", "gated"]:
+         z1c = z1c.copy()
+         z2c = z2c.copy()
+         z1c.columns = [f"z1_{c}" for c in z1c.columns]
+@@ -236,8 +236,9 @@ def ae_from_arrays(
+     model: PairedAE,
+     inputs: AEInputs,
+     device: str = "cuda:0",
+-    combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
+-    batch_size: Optional[int] = None, 
++    combine_mode: Literal["average", "concat",
++                          "z1", "z2", "gated"] = "average",
++    batch_size: Optional[int] = None,
+ ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+     """
+     Run a pretrained PairedAE on in-memory UNI and scGPT embeddings.
+@@ -251,7 +252,7 @@ def ae_from_arrays(
+         inputs: In-memory inputs containing AnnData and modality embeddings.
+         device: Torch device used for inference.
+         combine_mode: Strategy for combining modality embeddings.
+-            One of {"average", "concat", "z1", "z2"}.
++            One of {"average", "concat", "z1", "z2", "gated"}.
+             batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
+ 
+     Returns:
+@@ -269,7 +270,7 @@ def ae_from_arrays(
+     """
+     # determine which inputs are required based on combine_mode
+     needs_z1 = True
+-    needs_z2 = (combine_mode in ["average", "concat", "z2"])
++    needs_z2 = (combine_mode in ["average", "concat", "z2", "gated"])
+ 
+     idx = inputs.adata.obs_names.astype(str)
+ 
+@@ -340,8 +341,10 @@ def ae_from_arrays(
+         z1_np = np.vstack(z1_list) if z1_list else np.array([])
+         z2_np = np.vstack(z2_list) if z2_list else np.array([])
+ 
+-        z1_df = pd.DataFrame(z1_np, index=common) if len(z1_np) > 0 else pd.DataFrame(index=common)
+-        z2_df = pd.DataFrame(z2_np, index=common) if len(z2_np) > 0 else pd.DataFrame(index=common)
++        z1_df = pd.DataFrame(z1_np, index=common) if len(
++            z1_np) > 0 else pd.DataFrame(index=common)
++        z2_df = pd.DataFrame(z2_np, index=common) if len(
++            z2_np) > 0 else pd.DataFrame(index=common)
+ 
+     else:
+         with torch.no_grad():
+@@ -352,8 +355,10 @@ def ae_from_arrays(
+             z1_t = out.get("z1")
+             z2_t = out.get("z2")
+ 
+-        z1_df = pd.DataFrame(z1_t.cpu().numpy(), index=common) if z1_t is not None else pd.DataFrame(index=common)
+-        z2_df = pd.DataFrame(z2_t.cpu().numpy(), index=common) if z2_t is not None else pd.DataFrame(index=common)
++        z1_df = pd.DataFrame(z1_t.cpu().numpy(
++        ), index=common) if z1_t is not None else pd.DataFrame(index=common)
++        z2_df = pd.DataFrame(z2_t.cpu().numpy(
++        ), index=common) if z2_t is not None else pd.DataFrame(index=common)
+ 
+     z_joint_df = _combine_embeddings(z1_df, z2_df, combine_mode)
+     return z1_df, z2_df, z_joint_df
+@@ -427,7 +432,9 @@ class GCNInputs:
+     adata_by_sample: Dict[str, sc.AnnData]
+ 
+ 
+-def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, device: str = "cuda:0") -> GCNAutoencoder:
++def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, hidden_dim: int = 10,
++             num_layers: int = 2, combine_mode='average',
++             device: str = "cuda:0") -> GCNAutoencoder:
+     """
+     Load a pretrained GCN autoencoder from disk.
+ 
+@@ -440,8 +447,13 @@ def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, device: str = "cuda:0") ->
+         A GCNAutoencoder instance in evaluation mode.
+     """
+     model = GCNAutoencoder(
+-        in_dim=in_dim, hidden_dim=10, out_dim=in_dim,
+-        node_mask_ratio=0.9, num_layers=2, n_classes=0
++        in_dim=in_dim,
++        hidden_dim=hidden_dim,
++        out_dim=in_dim,
++        node_mask_ratio=0.9,
++        num_layers=num_layers,
++        n_classes=0,
++        combine_mode=combine_mode,
+     ).to(device)
+     state = torch.load(gcn_ckpt, map_location=device)
+     state = {k: v for k, v in state.items() if not k.startswith("classifier.")}
+@@ -513,7 +525,7 @@ def gcn_embeddings_from_joint(
+     celltype_key: str = "celltypes",
+     k: int = 30,
+     batch_size: Optional[int] = None,
+-    k_hop: int = 2,   
++    k_hop: int = 2,
+ ) -> pd.DataFrame:
+     """
+     Generate GCN embeddings from joint AE embeddings and spatial graphs.
+@@ -572,7 +584,10 @@ def run_full_embedding(
+     spatial_key: str = "spatial_px",
+     k: int = 30,
+     celltype_key: str = "celltypes",
+-    combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
++    combine_mode: Literal["average", "concat",
++                          "z1", "z2", "gated"] = "average",
++    hidden_dim: int = 10,
++    num_layers: int = 2,
+ 
+     ae_batch_size: Optional[int] = None,
+     gcn_batch_size: Optional[int] = None,
+@@ -635,13 +650,15 @@ def run_full_embedding(
+         ae_model_path = resolve_pkg_ckpt(
+             f"checkpoint_dir_ae/{DEFAULT_AE_CKPT_RELPATH}"
+         )
+-        print(f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
++        print(
++            f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
+     # Fallback to packaged pretrained GCN checkpoint when no path/model is provided.
+     if gcn_model_path is None and gcn_model is None:
+         gcn_model_path = resolve_pkg_ckpt(
+             f"checkpoint_dir_gcn/{DEFAULT_GCN_CKPT_RELPATH}"
+         )
+-        print(f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
++        print(
++            f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
+ 
+     # --- AE stage ---
+     if ae_inputs_by_sample is not None:
+@@ -656,7 +673,7 @@ def run_full_embedding(
+             tmp_state = torch.load(ae_model_path, map_location="cpu")
+             # encoder2 layers always start with a weight of shape (latent_dim, d2_dim)
+             for key, v in tmp_state.items():
+-                if key.startswith("encoder2.model.0.weight"):   # first Linear layer
++                if key.startswith("encoder2.model.0.weight"):
+                     d2_dim = v.shape[1]
+                     break
+ 
+@@ -729,7 +746,8 @@ def run_full_embedding(
+         if gcn_model_path is None:
+             raise ValueError("Provide gcn_model or gcn_model_path.")
+         gcn_model = load_gcn(
+-            gcn_model_path, in_dim=z_joint_df.shape[1], device=device)
++            gcn_model_path, in_dim=z_joint_df.shape[1], hidden_dim=hidden_dim,
++            num_layers=num_layers, combine_mode=combine_mode, device=device)
+ 
+     emb_df = gcn_embeddings_from_joint(
+         gcn_model=gcn_model,
+diff --git a/src/spatialfusion/finetune/finetune.py b/src/spatialfusion/finetune/finetune.py
+index 1cb1982..1b86b7b 100755
+--- a/src/spatialfusion/finetune/finetune.py
++++ b/src/spatialfusion/finetune/finetune.py
+@@ -820,4 +820,4 @@ def finetune_models(
+     )
+ 
+     print("✓ Finetuning complete.")
+-    return ae_model, gcn_model
++    return ae_model, gcn_model
+\ No newline at end of file
+diff --git a/src/spatialfusion/models/gcn.py b/src/spatialfusion/models/gcn.py
+index 343c689..8f0fe6f 100755
+--- a/src/spatialfusion/models/gcn.py
++++ b/src/spatialfusion/models/gcn.py
+@@ -4,6 +4,7 @@ GCN-based autoencoder model for node feature reconstruction and optional classif
+ This module provides:
+ - GCNAutoencoder: Graph convolutional autoencoder with masked node input and optional classification head.
+ """
++import dgl.function as fn
+ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+@@ -31,6 +32,7 @@ class GCNAutoencoder(nn.Module):
+         n_classes (int): Number of classes for node classification.
+             If 0, no classification head is used.
+     """
++
+     def __init__(self,
+                  in_dim: int,
+                  hidden_dim: int,
+@@ -39,7 +41,8 @@ class GCNAutoencoder(nn.Module):
+                  num_layers: int = 1,
+                  dropout: float = 0.2,
+                  noise_std: float = 0.1,
+-                 n_classes: int = 0):
++                 n_classes: int = 0,
++                 combine_mode: str = "average"):
+         """
+         Initialize the GCN autoencoder.
+ 
+@@ -60,15 +63,32 @@ class GCNAutoencoder(nn.Module):
+         self.dropout = dropout
+         self.noise_std = noise_std
+         self.n_classes = n_classes
++        self.combine_mode = combine_mode
++
++        if combine_mode == "gated":
++
++            self.modal_dim = in_dim // 2
++
++            self.fusion_gate = nn.Sequential(
++                nn.Linear(in_dim, in_dim),
++                nn.ReLU(),
++                nn.Linear(in_dim, self.modal_dim),
++                nn.Sigmoid()
++            )
++
++            first_gcn_dim = self.modal_dim
++
++        else:
++            first_gcn_dim = in_dim
+ 
+         # Learnable mask token
+-        self.mask_token = nn.Parameter(torch.zeros(in_dim))
++        self.mask_token = nn.Parameter(torch.zeros(first_gcn_dim))
+         nn.init.xavier_uniform_(self.mask_token.unsqueeze(0))
+ 
+         # GCN encoder layers
+         self.gcn_layers = nn.ModuleList()
+         self.norm_layers = nn.ModuleList()
+-        self.gcn_layers.append(dgl.nn.GraphConv(in_dim, hidden_dim))
++        self.gcn_layers.append(dgl.nn.GraphConv(first_gcn_dim, hidden_dim))
+         self.norm_layers.append(nn.LayerNorm(hidden_dim))
+ 
+         for _ in range(num_layers - 1):
+@@ -83,26 +103,35 @@ class GCNAutoencoder(nn.Module):
+         )
+ 
+         # Optional classifier
+-        self.classifier = nn.Linear(hidden_dim, n_classes) if n_classes > 0 else None
+-
+-    def encode(self, g: dgl.DGLGraph, feat: torch.Tensor) -> torch.Tensor:
+-        """
+-        Encode node features using stacked GCN layers.
++        self.classifier = nn.Linear(
++            hidden_dim, n_classes) if n_classes > 0 else None
+ 
+-        Args:
+-            g: Input DGL graph.
+-            feat: Input node feature tensor of shape (num_nodes, in_dim).
++    def encode(self, g, feat):
+ 
+-        Returns:
+-            Tensor of shape (num_nodes, hidden_dim) containing latent node embeddings.
+-        """
+         h = feat
+-        for i, (gcn, norm) in enumerate(zip(self.gcn_layers, self.norm_layers)):
++
++        if self.combine_mode == "gated":
++
++            z1, z2 = torch.chunk(h, 2, dim=1)
++
++            gates = self.fusion_gate(h)
++
++            h = gates * z1 + (1.0 - gates) * z2
++
++        for i, (gcn, norm) in enumerate(
++            zip(self.gcn_layers, self.norm_layers)
++        ):
+             h = gcn(g, h)
+             h = norm(h)
++
+             if i != self.num_layers - 1:
+                 h = F.relu(h)
+-                h = F.dropout(h, p=self.dropout, training=self.training)
++                h = F.dropout(
++                    h,
++                    p=self.dropout,
++                    training=self.training,
++                )
++
+         return h
+ 
+     def forward(self, g: dgl.DGLGraph):
+@@ -128,7 +157,18 @@ class GCNAutoencoder(nn.Module):
+                 - logits: Classification logits if `n_classes > 0`,
+                   otherwise `None`.
+         """
+-        x = g.ndata["feat"]
++
++        x_input = g.ndata["feat"]
++        x = x_input
++
++        if self.combine_mode == "gated":
++
++            z1, z2 = torch.chunk(x, 2, dim=1)
++
++            gates = self.fusion_gate(x)
++
++            x = gates * z1 + (1 - gates) * z2
++
+         num_nodes = g.num_nodes()
+         device = x.device
+ 
+@@ -149,4 +189,98 @@ class GCNAutoencoder(nn.Module):
+         x_recon = self.decoder(z)
+ 
+         logits = self.classifier(z) if self.classifier is not None else None
+-        return x_recon, x, node_mask, z, logits
++        return x_recon, x_input, node_mask, z, logits
++
++
++class SpatialSmoothingBaseline(nn.Module):
++
++    def __init__(
++        self,
++        node_mask_ratio=0.1,
++        num_smoothing_steps=5,
++        alpha=0.8,
++    ):
++        super().__init__()
++
++        self.node_mask_ratio = node_mask_ratio
++        self.num_smoothing_steps = num_smoothing_steps
++        self.alpha = alpha
++
++    def smooth(self, g, x0):
++
++        h = x0
++
++        with g.local_scope():
++
++            for _ in range(self.num_smoothing_steps):
++
++                g.ndata["h"] = h
++
++                g.update_all(
++                    fn.copy_u("h", "m"),
++                    fn.mean("m", "h_neigh")
++                )
++
++                h_neigh = g.ndata["h_neigh"]
++
++                # residual diffusion
++                h = (
++                    self.alpha * h_neigh
++                    + (1 - self.alpha) * x0
++                )
++
++        return h
++
++    def forward(self, g):
++
++        x = g.ndata["feat"]
++
++        num_nodes = g.num_nodes()
++        device = x.device
++
++        # SAME masking strategy as GCMAE
++        num_mask = max(
++            1,
++            int(self.node_mask_ratio * num_nodes)
++        )
++
++        mask_idx = torch.randperm(
++            num_nodes,
++            device=device
++        )[:num_mask]
++
++        node_mask = torch.zeros(
++            num_nodes,
++            dtype=torch.bool,
++            device=device
++        )
++
++        node_mask[mask_idx] = True
++
++        # zero-mask nodes
++        x_masked = x.clone()
++        x_masked[node_mask] = 0.0
++
++        # pure neighbor averaging
++        x_recon = self.smooth(g, x_masked)
++
++        # Match reconstruction target dimension in concat mode
++        if "feat_orig" in g.ndata:
++            out_dim = g.ndata["feat_orig"].shape[1]
++            x_recon = x_recon[:, :out_dim]
++
++        # no latent representation
++        z = x_recon
++
++        logits = None
++
++        return (
++            x_recon,
++            x,
++            node_mask,
++            z,
++            logits
++        )
++
++    def encode(self, g, feat):
++        return self.smooth(g, feat)
+diff --git a/src/spatialfusion/models/multi_ae.py b/src/spatialfusion/models/multi_ae.py
+index 52f4051..3d9115e 100755
+--- a/src/spatialfusion/models/multi_ae.py
++++ b/src/spatialfusion/models/multi_ae.py
+@@ -199,4 +199,4 @@ class PairedAE(nn.Module):
+             "recon2": recon2,
+             "cross12": cross12,
+             "cross21": cross21
+-        }
++        }
+\ No newline at end of file
+diff --git a/src/spatialfusion/utils/ae_data_loader.py b/src/spatialfusion/utils/ae_data_loader.py
+index ec3b4c8..59dc5d4 100755
+--- a/src/spatialfusion/utils/ae_data_loader.py
++++ b/src/spatialfusion/utils/ae_data_loader.py
+@@ -14,6 +14,21 @@ import random
+ import numpy as np
+ 
+ 
++# ---------------------------------------------------------
++# Embedding filename registry
++# ---------------------------------------------------------
++
++HE_EMBEDDINGS = {
++    "uni": "UNI",
++    "virchow": "Virchow2",
++}
++
++RNA_EMBEDDINGS = {
++    "scgpt": "scGPT",
++    "nicheformer": "nicheformer",
++}
++
++
+ def load_file_with_fallback(base_path, filename_base):
+     """
+     Attempts to load a DataFrame from CSV or Parquet.
+@@ -31,16 +46,25 @@ def load_file_with_fallback(base_path, filename_base):
+ 
+     if csv_path.exists():
+         return pd.read_csv(csv_path, index_col=0)
++
+     elif parquet_path.exists():
+         return pd.read_parquet(parquet_path)
++
+     else:
+         raise FileNotFoundError(
+-            f"Neither {csv_path.name} nor {parquet_path.name} found in {base_path}")
++            f"Neither {csv_path.name} nor "
++            f"{parquet_path.name} found in {base_path}"
++        )
+ 
+ 
+-def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float = 1e-5) -> pd.DataFrame:
++def safe_standardize(
++    df: pd.DataFrame,
++    fill_value: float = 0.0,
++    min_std: float = 1e-5
++) -> pd.DataFrame:
+     """
+     Standardizes a DataFrame (z-score per column) while avoiding NaNs and large numbers.
++
+     Handles unsafe float16 input by casting to float32 first.
+ 
+     Any column with std < min_std is filled with `fill_value`.
+@@ -53,7 +77,8 @@ def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float =
+     Returns:
+         pd.DataFrame: Standardized DataFrame (float32), no NaNs.
+     """
+-    # Ensure float32 to prevent float16 overflow and float64 memory bloat
++
++    # prevent float16 overflow + float64 memory blowup
+     df = df.astype(np.float32, copy=False)
+ 
+     means = df.mean()
+@@ -67,71 +92,154 @@ def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float =
+ 
+     if low_variance_mask.any():
+         print(
+-            f"⚠️ Columns with std < {min_std} set to {fill_value}: {list(df.columns[low_variance_mask])}")
++            f"⚠️ Columns with std < {min_std} "
++            f"set to {fill_value}: "
++            f"{list(df.columns[low_variance_mask])}"
++        )
+ 
+-    # Final safety check
+-    assert np.isfinite(standardized.values).all(
+-    ), "Non-finite values in standardized data"
++    # final safety check
++    assert np.isfinite(standardized.values).all(), (
++        "Non-finite values in standardized data"
++    )
+ 
+     return standardized.astype(np.float32)
+ 
+ 
+-def load_and_preprocess_sample(sample_name, base_path, max_cells=30000):
++def load_and_preprocess_sample(
++    sample_name,
++    base_path,
++    max_cells=30000,
++    he_encoder="uni",
++    rna_encoder="scgpt",
++):
+     """
+     Loads and preprocesses paired sample embeddings for AE training.
+-    - Loads UNI and scGPT embeddings for a sample.
+-    - Intersects cell IDs, samples up to max_cells.
+-    - Imputes NaNs with mean values.
+-    - Standardizes features robustly.
++
++    Steps:
++    - Load selected HE + RNA embeddings
++    - Intersect cell IDs
++    - Randomly sample up to max_cells
++    - Impute NaNs
++    - Standardize features
+ 
+     Args:
+         sample_name (str): Sample identifier.
+         base_path (str or Path): Directory containing sample data.
+         max_cells (int): Maximum number of cells to sample.
++        he_encoder (str): HE encoder name.
++            Options: "uni", "virchow"
++        rna_encoder (str): RNA encoder name.
++            Options: "scgpt", "nicheformer"
+ 
+     Returns:
+-        tuple: (std_feat_1, std_feat_2, selected_ids)
+-            std_feat_1 (pd.DataFrame): Standardized UNI features.
+-            std_feat_2 (pd.DataFrame): Standardized scGPT features.
+-            selected_ids (list): List of selected cell IDs.
++        tuple:
++            std_feat_1 (pd.DataFrame):
++                Standardized HE features
++
++            std_feat_2 (pd.DataFrame):
++                Standardized RNA features
++
++            selected_ids (list):
++                Selected cell IDs
+     """
++
++    he_encoder = he_encoder.lower()
++    rna_encoder = rna_encoder.lower()
++
++    if he_encoder not in HE_EMBEDDINGS:
++        raise ValueError(
++            f"Unknown HE encoder: {he_encoder}. "
++            f"Valid options: {list(HE_EMBEDDINGS.keys())}"
++        )
++
++    if rna_encoder not in RNA_EMBEDDINGS:
++        raise ValueError(
++            f"Unknown RNA encoder: {rna_encoder}. "
++            f"Valid options: {list(RNA_EMBEDDINGS.keys())}"
++        )
++
+     datapath = pl.Path(base_path) / sample_name
+     embedding_path = datapath / "embeddings"
+ 
+-    # Load either .csv or .parquet
+-    uni = load_file_with_fallback(embedding_path, "UNI")
+-    scgpt = load_file_with_fallback(embedding_path, "scGPT")
++    he_file = HE_EMBEDDINGS[he_encoder]
++    rna_file = RNA_EMBEDDINGS[rna_encoder]
++
++    print(
++        f"[{sample_name}] "
++        f"Loading HE={he_encoder} ({he_file}) | "
++        f"RNA={rna_encoder} ({rna_file})"
++    )
+ 
++    # ---------------------------------------------------------
++    # Load embeddings
++    # ---------------------------------------------------------
++
++    he_df = load_file_with_fallback(
++        embedding_path,
++        he_file
++    )
++
++    rna_df = load_file_with_fallback(
++        embedding_path,
++        rna_file
++    )
++
++    # ---------------------------------------------------------
+     # Intersect cell IDs
+-    cell_ids = set(uni.index).intersection(scgpt.index)
++    # ---------------------------------------------------------
++
++    cell_ids = set(he_df.index).intersection(rna_df.index)
++
+     if not cell_ids:
+-        raise ValueError(f"No common cells found in {sample_name}.")
++        raise ValueError(
++            f"No common cells found in {sample_name}."
++        )
+ 
+     common_ids = list(cell_ids)
++
+     n_cells = min(len(common_ids), max_cells)
++
+     selected_ids = random.sample(common_ids, n_cells)
+ 
+-    patho_feat = uni.loc[selected_ids]
+-    transcr_feat = scgpt.loc[selected_ids]
++    he_feat = he_df.loc[selected_ids]
++    rna_feat = rna_df.loc[selected_ids]
++
++    # ---------------------------------------------------------
++    # NaN imputation
++    # ---------------------------------------------------------
+ 
+-    # Impute NaNs
+-    patho_nans = patho_feat.isna().any()
+-    transcr_nans = transcr_feat.isna().any()
++    he_nans = he_feat.isna().any()
++    rna_nans = rna_feat.isna().any()
++
++    if he_nans.any():
++
++        bad_dims = list(he_nans[he_nans].index)
+ 
+-    if patho_nans.any():
+-        bad_dims = list(patho_nans[patho_nans].index)
+         warnings.warn(
+-            f"[{sample_name}] UNI has NaNs in dims: {bad_dims}. Applying mean imputation.")
+-        patho_feat = patho_feat.fillna(patho_feat.mean())
++            f"[{sample_name}] "
++            f"{he_file} has NaNs in dims: {bad_dims}. "
++            f"Applying mean imputation."
++        )
++
++        he_feat = he_feat.fillna(he_feat.mean())
++
++    if rna_nans.any():
++
++        bad_dims = list(rna_nans[rna_nans].index)
+ 
+-    if transcr_nans.any():
+-        bad_dims = list(transcr_nans[transcr_nans].index)
+         warnings.warn(
+-            f"[{sample_name}] scGPT has NaNs in dims: {bad_dims}. Applying mean imputation.")
+-        transcr_feat = transcr_feat.fillna(transcr_feat.mean())
++            f"[{sample_name}] "
++            f"{rna_file} has NaNs in dims: {bad_dims}. "
++            f"Applying mean imputation."
++        )
++
++        rna_feat = rna_feat.fillna(rna_feat.mean())
++
++    # ---------------------------------------------------------
++    # Standardization
++    # ---------------------------------------------------------
+ 
+-    # Safe Standardization
+-    std_feat_1 = safe_standardize(patho_feat)
+-    std_feat_2 = safe_standardize(transcr_feat)
++    std_feat_1 = safe_standardize(he_feat)
++    std_feat_2 = safe_standardize(rna_feat)
+ 
+     return std_feat_1, std_feat_2, selected_ids
+diff --git a/src/spatialfusion/utils/embed_ae_utils.py b/src/spatialfusion/utils/embed_ae_utils.py
+index 934f2ee..c398e87 100755
+--- a/src/spatialfusion/utils/embed_ae_utils.py
++++ b/src/spatialfusion/utils/embed_ae_utils.py
+@@ -22,6 +22,16 @@ LABEL_CANDIDATES = [
+     "label", "labels", "annotation", "Annotation", 'major_celltype',
+ ]
+ 
++HE_EMBEDDINGS = {
++    "uni": "UNI",
++    "virchow": "Virchow2",
++}
++
++RNA_EMBEDDINGS = {
++    "scgpt": "scGPT",
++    "nicheformer": "nicheformer",
++}
++
+ 
+ def _to_str_index(idx_like):
+     """
+@@ -98,212 +108,519 @@ def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float =
+     return standardized.astype(np.float32)
+ 
+ 
+-def extract_embeddings_for_all_samples(model, sample_list, base_path, device='cpu', batch_size=None):
++def extract_embeddings_for_all_samples(
++    model,
++    sample_list,
++    base_path,
++    device="cpu",
++    batch_size=None,
++    he_encoder="uni",
++    rna_encoder="scgpt",
++):
+     """
+-    Extract embeddings for all samples using a trained AE model.
+-    Loads UNI and scGPT embeddings, matches cell IDs, standardizes features, and computes model embeddings.
+-    Also extracts cell type labels and sample names.
++    Extract latent embeddings for all samples using a trained paired AE.
++
++    This function:
++
++    1. Loads the requested HE embeddings
++       (UNI or Virchow).
++
++    2. Loads the requested RNA embeddings
++       (scGPT or Nicheformer).
++
++    3. Intersects cell identifiers across:
++       - HE embeddings
++       - RNA embeddings
++       - cell type annotations
++
++    4. Standardizes both modalities.
++
++    5. Computes latent representations using:
++       - encoder1 (HE branch)
++       - encoder2 (RNA branch)
++
++    6. Computes a joint embedding via arithmetic mean:
++           z_joint = (z1 + z2) / 2
+ 
+     Args:
+-        model: Trained AE model with encoder1 and encoder2.
+-        sample_list (list): List of sample info (str or dict).
+-        base_path (str or Path): Base directory for samples.
+-        device (str): Device for model inference.
+-        batch_size (Optional[int]): Batch size for AE inference. If None, an
+-            effective batch size is auto-determined per sample.
++        model:
++            Trained PairedAE model.
++
++        sample_list:
++            List of sample names or sample dictionaries.
++
++        base_path:
++            Root directory containing sample folders.
++
++        device:
++            Torch device for inference.
++
++        batch_size:
++            Optional inference batch size.
++            If None, a memory-aware batch size is chosen.
++
++        he_encoder:
++            HE embedding type.
++
++            Supported:
++                - "uni"
++                - "virchow"
++
++        rna_encoder:
++            RNA embedding type.
++
++            Supported:
++                - "scgpt"
++                - "nicheformer"
+ 
+     Returns:
+-        tuple: (z1_df, z2_df, z_joint_df, celltypes, samples)
+-            z1_df (pd.DataFrame): Embeddings from encoder1.
+-            z2_df (pd.DataFrame): Embeddings from encoder2.
+-            z_joint_df (pd.DataFrame): Averaged joint embeddings.
+-            celltypes (np.ndarray): Cell type labels.
+-            samples (np.ndarray): Sample names.
++        tuple:
++
++            z1_df:
++                Latent embeddings from encoder1
++                (HE modality).
++
++            z2_df:
++                Latent embeddings from encoder2
++                (RNA modality).
++
++            z_joint_df:
++                Averaged latent embeddings.
++
++            celltypes:
++                Cell type labels.
++
++            samples:
++                Sample identifiers.
+     """
+-    all_z1, all_z2, all_zjoint = [], [], []
+-    all_celltypes, all_samples = [], []
++
++    he_encoder = he_encoder.lower()
++    rna_encoder = rna_encoder.lower()
++
++    if he_encoder not in HE_EMBEDDINGS:
++        raise ValueError(
++            f"Unknown HE encoder '{he_encoder}'. "
++            f"Valid options: {list(HE_EMBEDDINGS.keys())}"
++        )
++
++    if rna_encoder not in RNA_EMBEDDINGS:
++        raise ValueError(
++            f"Unknown RNA encoder '{rna_encoder}'. "
++            f"Valid options: {list(RNA_EMBEDDINGS.keys())}"
++        )
++
++    he_file = HE_EMBEDDINGS[he_encoder]
++    rna_file = RNA_EMBEDDINGS[rna_encoder]
++
++    print(
++        f"Using HE encoder: {he_encoder} ({he_file}) | "
++        f"RNA encoder: {rna_encoder} ({rna_file})"
++    )
++
++    all_z1 = []
++    all_z2 = []
++    all_zjoint = []
++
++    all_celltypes = []
++    all_samples = []
+ 
+     model.eval()
+ 
+     with torch.no_grad():
+-        for sample_info in tqdm(sample_list, desc="Processing samples"):
+-            # Support legacy string or new dict format with custom path
++
++        for sample_info in tqdm(
++            sample_list,
++            desc="Processing samples"
++        ):
++
+             if isinstance(sample_info, Mapping):
+                 sample = str(sample_info["name"])
+-                sample_path = str(sample_info.get("path", base_path))
++                sample_path = str(
++                    sample_info.get("path", base_path)
++                )
+             else:
+                 sample = str(sample_info)
+                 sample_path = str(base_path)
+ 
+             datapath = pl.Path(sample_path) / sample
++
+             embeddings_path = datapath / "embeddings"
+             celltypes_path = datapath / "celltypes.csv"
+ 
+-            print(f"🔍 Looking for embeddings in: {embeddings_path}")
++            print(
++                f"🔍 [{sample}] "
++                f"Searching for "
++                f"{he_file} + {rna_file}"
++            )
++
++            # --------------------------------------------------
++            # Locate embedding files
++            # --------------------------------------------------
++
++            he_path = None
+ 
+-            # Detect UNI
+-            uni_path = None
+-            for ext in ('.csv', '.parquet'):
+-                p = embeddings_path / f"UNI{ext}"
+-                if p.exists():
+-                    uni_path = p
++            for ext in (".csv", ".parquet"):
++                candidate = embeddings_path / f"{he_file}{ext}"
++
++                if candidate.exists():
++                    he_path = candidate
+                     break
+ 
+-            # Detect scGPT
+-            scgpt_path = None
+-            for ext in ('.csv', '.parquet'):
+-                p = embeddings_path / f"scGPT{ext}"
+-                if p.exists():
+-                    scgpt_path = p
++            rna_path = None
++
++            for ext in (".csv", ".parquet"):
++                candidate = embeddings_path / f"{rna_file}{ext}"
++
++                if candidate.exists():
++                    rna_path = candidate
+                     break
+ 
+-            if not (uni_path and scgpt_path):
+-                print(f"⚠️ Missing embedding files for {sample}, skipping.")
++            if not (he_path and rna_path):
++                print(
++                    f"⚠️ Missing embeddings for {sample} "
++                    f"({he_file}, {rna_file})"
++                )
+                 continue
+ 
++            # --------------------------------------------------
++            # Load embeddings
++            # --------------------------------------------------
++
+             try:
+-                uni = (pd.read_csv(uni_path, index_col=0) if uni_path.suffix == '.csv'
+-                       else pd.read_parquet(uni_path)).astype('float32')
+-                scgpt = (pd.read_csv(scgpt_path, index_col=0) if scgpt_path.suffix == '.csv'
+-                         else pd.read_parquet(scgpt_path)).astype('float32')
+ 
+-                # 🔧 Canonicalize indices to strings (trim whitespace)
+-                uni.index = _to_str_index(uni.index)
+-                scgpt.index = _to_str_index(scgpt.index)
++                he_df = (
++                    pd.read_csv(
++                        he_path,
++                        index_col=0,
++                    )
++                    if he_path.suffix == ".csv"
++                    else pd.read_parquet(he_path)
++                ).astype(np.float32)
++
++                rna_df = (
++                    pd.read_csv(
++                        rna_path,
++                        index_col=0,
++                    )
++                    if rna_path.suffix == ".csv"
++                    else pd.read_parquet(rna_path)
++                ).astype(np.float32)
++
++                he_df.index = _to_str_index(
++                    he_df.index
++                )
++
++                rna_df.index = _to_str_index(
++                    rna_df.index
++                )
+ 
+             except Exception as e:
+-                print(f"❌ Skipping {sample} due to read error: {e}")
++
++                print(
++                    f"❌ Failed reading "
++                    f"{sample}: {e}"
++                )
++
+                 continue
+ 
+-            # Determine available IDs
++            # --------------------------------------------------
++            # Load labels
++            # --------------------------------------------------
++
+             adata = None
++
+             try:
++
+                 if celltypes_path.exists():
+-                    ct_df = pd.read_csv(celltypes_path, index_col=0)
+-                    # <- make labels index strings
+-                    ct_df.index = _to_str_index(ct_df.index)
++
++                    ct_df = pd.read_csv(
++                        celltypes_path,
++                        index_col=0,
++                    )
++
++                    ct_df.index = _to_str_index(
++                        ct_df.index
++                    )
++
+                     base_ids = set(ct_df.index)
++
+                 else:
+-                    adata = sc.read_h5ad(datapath / "adata.h5ad")
+-                    # Ensure obs_names are strings
+-                    adata.obs_names = _to_str_index(adata.obs_names)
+-                    base_ids = set(adata.obs_names)
++
++                    adata = sc.read_h5ad(
++                        datapath / "adata.h5ad"
++                    )
++
++                    adata.obs_names = _to_str_index(
++                        adata.obs_names
++                    )
++
++                    base_ids = set(
++                        adata.obs_names
++                    )
++
+             except Exception as e:
++
+                 print(
+-                    f"⚠️ No celltypes.csv or unreadable adata.h5ad for {sample} ({e}), skipping.")
++                    f"⚠️ Unable to load labels "
++                    f"for {sample}: {e}"
++                )
++
+                 continue
+ 
+-            # Intersect on string IDs
+-            cell_ids = set(uni.index) & set(scgpt.index) & base_ids
++            # --------------------------------------------------
++            # Intersect cell IDs
++            # --------------------------------------------------
++
++            cell_ids = (
++                set(he_df.index)
++                & set(rna_df.index)
++                & base_ids
++            )
+ 
+             if not cell_ids:
+-                # Helpful debug: show small samples of IDs
+-                u0 = list(uni.index)[:3]
+-                s0 = list(scgpt.index)[:3]
+-                b0 = list(base_ids)[:3]
+-                print(f"⚠️ No overlapping cell IDs for {sample}, skipping."
+-                      f"\n   UNI sample IDs: {u0}"
+-                      f"\n   scGPT sample IDs: {s0}"
+-                      f"\n   Base (labels/adata) sample IDs: {b0}")
++
++                print(
++                    f"⚠️ No overlapping cells "
++                    f"for {sample}"
++                )
++
+                 continue
+ 
+             common_ids = sorted(cell_ids)
+-            patho_feat = uni.loc[common_ids]
+-            transcr_feat = scgpt.loc[common_ids]
+ 
+-            std_feat_1 = safe_standardize(patho_feat)
+-            std_feat_2 = safe_standardize(transcr_feat)
++            he_feat = he_df.loc[common_ids]
++            rna_feat = rna_df.loc[common_ids]
++
++            std_feat_1 = safe_standardize(
++                he_feat
++            )
+ 
+-            X1_np = std_feat_1.values.astype(np.float32)
+-            X2_np = std_feat_2.values.astype(np.float32)
++            std_feat_2 = safe_standardize(
++                rna_feat
++            )
++
++            X1_np = std_feat_1.values.astype(
++                np.float32
++            )
++
++            X2_np = std_feat_2.values.astype(
++                np.float32
++            )
+ 
+             n_samples = X1_np.shape[0]
+ 
+-            # Auto-determine batch size if not provided (mirrors ae_from_arrays)
++            # --------------------------------------------------
++            # Auto batch size
++            # --------------------------------------------------
++
+             effective_batch_size = batch_size
++
+             if effective_batch_size is None:
+-                est_mem_per_sample = (X1_np.shape[1] + X2_np.shape[1]) * 4 * 2
+-                effective_batch_size = max(
+-                    1, int(300 * 1024 * 1024 / est_mem_per_sample))
+-                effective_batch_size = min(effective_batch_size, 5000)
+-                effective_batch_size = max(effective_batch_size, 100)
+ 
+-            # -------------------------------------------------
+-            # MODE 1: Full-sample inference
+-            # -------------------------------------------------
+-            if n_samples <= effective_batch_size:
+-                X1 = torch.from_numpy(X1_np).to(device)
+-                X2 = torch.from_numpy(X2_np).to(device)
++                est_mem_per_sample = (
++                    (X1_np.shape[1] + X2_np.shape[1])
++                    * 4
++                    * 2
++                )
+ 
+-                z1 = model.encoder1(X1).cpu().numpy()
+-                z2 = model.encoder2(X2).cpu().numpy()
++                effective_batch_size = max(
++                    1,
++                    int(
++                        300 * 1024 * 1024
++                        / est_mem_per_sample
++                    ),
++                )
++
++                effective_batch_size = min(
++                    effective_batch_size,
++                    5000,
++                )
+ 
+-            # -------------------------------------------------
+-            # MODE 2: Batched inference
+-            # -------------------------------------------------
+-            else:
+-                z1_list, z2_list = [], []
++                effective_batch_size = max(
++                    effective_batch_size,
++                    100,
++                )
+ 
+-                for start in range(0, n_samples, effective_batch_size):
+-                    end = min(start + effective_batch_size, n_samples)
++            # --------------------------------------------------
++            # Forward pass
++            # --------------------------------------------------
+ 
+-                    X1_batch = torch.from_numpy(X1_np[start:end]).to(device)
+-                    X2_batch = torch.from_numpy(X2_np[start:end]).to(device)
++            if n_samples <= effective_batch_size:
+ 
+-                    z1_batch = model.encoder1(X1_batch).cpu().numpy()
+-                    z2_batch = model.encoder2(X2_batch).cpu().numpy()
++                X1 = torch.from_numpy(
++                    X1_np
++                ).to(device)
+ 
+-                    z1_list.append(z1_batch)
+-                    z2_list.append(z2_batch)
++                X2 = torch.from_numpy(
++                    X2_np
++                ).to(device)
+ 
+-                    del X1_batch, X2_batch
+-                    if str(device).startswith("cuda"):
+-                        torch.cuda.empty_cache()
++                z1 = model.encoder1(
++                    X1
++                ).cpu().numpy()
+ 
+-                z1 = np.vstack(z1_list)
+-                z2 = np.vstack(z2_list)
++                z2 = model.encoder2(
++                    X2
++                ).cpu().numpy()
+ 
+-            z_joint = (z1 + z2) / 2
++            else:
+ 
+-            all_z1.append(pd.DataFrame(z1, index=common_ids))
+-            all_z2.append(pd.DataFrame(z2, index=common_ids))
+-            all_zjoint.append(pd.DataFrame(z_joint, index=common_ids))
++                z1_chunks = []
++                z2_chunks = []
++
++                for start in range(
++                    0,
++                    n_samples,
++                    effective_batch_size,
++                ):
++
++                    end = min(
++                        start + effective_batch_size,
++                        n_samples,
++                    )
++
++                    X1_batch = torch.from_numpy(
++                        X1_np[start:end]
++                    ).to(device)
++
++                    X2_batch = torch.from_numpy(
++                        X2_np[start:end]
++                    ).to(device)
++
++                    z1_chunks.append(
++                        model.encoder1(
++                            X1_batch
++                        ).cpu().numpy()
++                    )
++
++                    z2_chunks.append(
++                        model.encoder2(
++                            X2_batch
++                        ).cpu().numpy()
++                    )
++
++                z1 = np.vstack(z1_chunks)
++                z2 = np.vstack(z2_chunks)
++
++            z_joint = (z1 + z2) / 2.0
++
++            all_z1.append(
++                pd.DataFrame(
++                    z1,
++                    index=common_ids,
++                )
++            )
++
++            all_z2.append(
++                pd.DataFrame(
++                    z2,
++                    index=common_ids,
++                )
++            )
++
++            all_zjoint.append(
++                pd.DataFrame(
++                    z_joint,
++                    index=common_ids,
++                )
++            )
+ 
+-            # Labels
+             if celltypes_path.exists():
+-                labels = _extract_labels_from_df(ct_df, common_ids)
++
++                labels = _extract_labels_from_df(
++                    ct_df,
++                    common_ids,
++                )
++
+             else:
+-                obs = adata.obs.loc[common_ids]
++
++                obs = adata.obs.loc[
++                    common_ids
++                ]
++
+                 picked = None
++
+                 for col in LABEL_CANDIDATES:
++
+                     if col in obs.columns:
+-                        picked = obs[col].astype(str).to_numpy()
++                        picked = (
++                            obs[col]
++                            .astype(str)
++                            .to_numpy()
++                        )
+                         break
+-                labels = picked if picked is not None else np.array(
+-                    ["unknown"] * len(common_ids), dtype=object)
+ 
+-            labels = np.asarray(labels).reshape(-1)
+-            all_celltypes.append(labels)
++                labels = (
++                    picked
++                    if picked is not None
++                    else np.array(
++                        ["unknown"] * len(common_ids),
++                        dtype=object,
++                    )
++                )
++
++            all_celltypes.append(
++                np.asarray(labels)
++            )
++
+             all_samples.append(
+-                np.array([sample] * len(common_ids), dtype=object))
++                np.array(
++                    [sample] * len(common_ids),
++                    dtype=object,
++                )
++            )
++
++    z1_df = (
++        pd.concat(all_z1)
++        if all_z1
++        else pd.DataFrame()
++    )
++
++    z2_df = (
++        pd.concat(all_z2)
++        if all_z2
++        else pd.DataFrame()
++    )
+ 
+-    # Concatenate
+-    z1_df = pd.concat(all_z1) if all_z1 else pd.DataFrame()
+-    z2_df = pd.concat(all_z2) if all_z2 else pd.DataFrame()
+-    z_joint_df = pd.concat(all_zjoint) if all_zjoint else pd.DataFrame()
++    z_joint_df = (
++        pd.concat(all_zjoint)
++        if all_zjoint
++        else pd.DataFrame()
++    )
+ 
+-    celltypes = np.concatenate(
+-        all_celltypes, axis=0) if all_celltypes else np.array([], dtype=object)
+-    samples = np.concatenate(
+-        all_samples, axis=0) if all_samples else np.array([], dtype=object)
++    celltypes = (
++        np.concatenate(all_celltypes)
++        if all_celltypes
++        else np.array([], dtype=object)
++    )
++
++    samples = (
++        np.concatenate(all_samples)
++        if all_samples
++        else np.array([], dtype=object)
++    )
+ 
+-    # Final safety: ensure indices are strings
+     if not z_joint_df.empty:
+-        z1_df.index = _to_str_index(z1_df.index)
+-        z2_df.index = _to_str_index(z2_df.index)
+-        z_joint_df.index = _to_str_index(z_joint_df.index)
+ 
+-    return z1_df, z2_df, z_joint_df, celltypes, samples
++        z1_df.index = _to_str_index(
++            z1_df.index
++        )
++
++        z2_df.index = _to_str_index(
++            z2_df.index
++        )
++
++        z_joint_df.index = _to_str_index(
++            z_joint_df.index
++        )
++
++    return (
++        z1_df,
++        z2_df,
++        z_joint_df,
++        celltypes,
++        samples,
++    )
+ 
+ 
+ def save_embeddings_separately(z1_df, z2_df, z_joint_df, celltypes, samples, out_dir, mode='train', compression="gzip"):
+diff --git a/src/spatialfusion/utils/gcn_utils.py b/src/spatialfusion/utils/gcn_utils.py
+index ee8c260..0edf8d3 100755
+--- a/src/spatialfusion/utils/gcn_utils.py
++++ b/src/spatialfusion/utils/gcn_utils.py
+@@ -123,4 +123,4 @@ def split_index(index: List[str]) -> tuple[np.ndarray, np.ndarray]:
+             sample_ids.append(idx)
+             corrected_index.append("")  # fallback if unexpected
+ 
+-    return np.array(sample_ids), np.array(corrected_index)
++    return np.array(sample_ids), np.array(corrected_index)
+\ No newline at end of file

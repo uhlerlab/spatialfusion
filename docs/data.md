@@ -10,9 +10,9 @@ The method requires:
 If providing paired ST data, the method accepts an AnnData object. 
 At minimum, the adata object must contain:
 
-- adata.obsm['spatial']: this should contain the X and Y coordinates of the cell/nuclei centroid in the high-resolution pixel space of the associated WSI.
+- adata.obsm['spatial_px']: this should contain the X and Y coordinates of the cell/nuclei centroid in the high-resolution pixel space of the associated WSI. This is the default key expected by SpatialFusion; if your AnnData uses a different key, pass `spatial_key=<your_key>` to `run_full_embedding` (check available keys with `list(adata.obsm.keys())`).
 - adata.X: this should be the cell x gene matrix of raw counts (! this needs to be single-cell resolution data)
-- (optional): adata.obs['celltype']: the annotated celltypes (here called 'major_celltype').
+- (optional): adata.obs['celltypes']: the annotated cell types. This is the default key; if your AnnData uses a different column name, pass `celltype_key=<your_key>` to `run_full_embedding` (check available columns with `adata.obs.columns.tolist()`).
 
 SpatialFusion expects preprocessed and aligned data.
 

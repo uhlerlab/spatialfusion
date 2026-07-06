@@ -136,12 +136,16 @@ ae_inputs_by_sample = {
 }
 
 # Run the multimodal embedding pipeline
+# spatial_key: key in adata.obsm holding X/Y coordinates — set to match your AnnData
+#   (e.g. check with list(adata.obsm.keys()))
+# celltype_key: key in adata.obs holding cell type labels — set to match your AnnData
+#   (e.g. check with adata.obs.columns.tolist())
 emb_df = run_full_embedding(
     ae_inputs_by_sample=ae_inputs_by_sample,
     device="cuda:0", # if cpu, "cpu"
     combine_mode="average",
-    spatial_key='spatial',
-    celltype_key='major_celltype',
+    spatial_key='spatial_px',
+    celltype_key='celltypes',
     save_ae_dir=None,  # optional
 )
 ```
@@ -158,9 +162,9 @@ SpatialFusion operates on a **single-cell AnnData object** paired with an **H&E 
 
 | Key                                | Description                                                       |
 | ---------------------------------- | ----------------------------------------------------------------- |
-| `adata.obsm['spatial']`            | X/Y centroid coordinates of each cell/nucleus in WSI pixel space. |
+| `adata.obsm['spatial_px']`         | X/Y centroid coordinates of each cell/nucleus in WSI pixel space. This is the default key expected by SpatialFusion; pass `spatial_key=` to `run_full_embedding` if your AnnData uses a different key (check with `list(adata.obsm.keys())`). |
 | `adata.X`                          | Raw counts (cell × gene). Must be single-cell resolution.         |
-| `adata.obs['celltype']` (optional) | Annotated cell types (`major_celltype` in examples).              |
+| `adata.obs['celltypes']` (optional) | Annotated cell types. This is the default key; pass `celltype_key=` to `run_full_embedding` if your AnnData uses a different column name (check with `adata.obs.columns.tolist()`). |
 
 ### **Whole-Slide Image (WSI)**
 

@@ -83,6 +83,6 @@ testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [project.urls]
-Homepage = "https://github.com/your-org/spatialfusion"
-Documentation = "https://readthedocs.org/projects/your-docs"
-Issues = "https://github.com/your-org/spatialfusion/issues"
+Homepage = "https://github.com/uhlerlab/spatialfusion"
+Documentation = "https://uhlerlab.github.io/spatialfusion/"
+Issues = "https://github.com/uhlerlab/spatialfusion/issues"

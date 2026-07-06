@@ -386,7 +386,9 @@ def ae_from_disk_for_samples(
         base_path: Base directory containing sample subfolders.
         device: Torch device used for inference.
         combine_mode: Strategy for combining modality embeddings.
-            One of {"average", "concat", "z1", "z2"}.
+            One of {"average", "concat", "z1", "z2"}. Note: "gated" is not
+            supported for disk-based loading; use the in-memory path
+            (``ae_from_arrays``) if you need the "gated" mode.
         batch_size: Optional batch size for AE inference from disk.
         save_dir: Optional directory in which to save AE outputs.
 
@@ -441,6 +443,11 @@ def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, hidden_dim: int = 10,
     Args:
         gcn_ckpt: Path to the GCN checkpoint file.
         in_dim: Input feature dimensionality.
+        hidden_dim: Hidden layer dimensionality of the GCN. Must match the
+            value used when the checkpoint was trained (default: 10).
+        num_layers: Number of GCN layers. Must match the checkpoint (default: 2).
+        combine_mode: Embedding combination strategy the GCN was trained with.
+            One of {"average", "concat", "z1", "z2", "gated"}.
         device: Torch device on which to load the model.
 
     Returns:
@@ -480,7 +487,9 @@ def graphs_from_embeddings_and_adata(
     Args:
         z_joint: Joint AE embeddings indexed by cell ID.
         adata_by_sample: Mapping from sample ID to AnnData.
-        spatial_key: Key in `adata.obsm` containing spatial coordinates.
+        spatial_key: Key in ``adata.obsm`` containing spatial coordinates
+            (default: ``"spatial"``). Set this to whichever key holds the
+            X/Y centroid coordinates in your AnnData.
         k: Number of nearest neighbors for graph construction.
 
     Returns:
@@ -540,8 +549,12 @@ def gcn_embeddings_from_joint(
         adata_by_sample: Mapping from sample ID to AnnData.
         base_path: Base path used for metadata resolution.
         device: Torch device used for inference.
-        spatial_key: Key in AnnData.obsm containing spatial coordinates.
-        celltype_key: Key in AnnData.obs containing cell type annotations.
+        spatial_key: Key in ``adata.obsm`` containing spatial coordinates
+            (default: ``"spatial"``). Set this to whichever key holds the
+            X/Y centroid coordinates in your AnnData.
+        celltype_key: Key in ``adata.obs`` containing cell type annotations
+            (default: ``"celltypes"``). Set this to the column name used in
+            your AnnData.
         k: Number of neighbors for KNN graph construction.
         batch_size: Optional batch size for GCN inference.
         k_hop: Number of hops in the spatial graph for batching.
@@ -625,9 +638,14 @@ def run_full_embedding(
         gcn_model: Optional preloaded GCN model.
         latent_dim: Latent dimensionality of the AE.
         device: Torch device used for inference.
-        spatial_key: Key in AnnData.obsm for spatial coordinates.
+        spatial_key: Key in ``adata.obsm`` containing spatial coordinates
+            (default: ``"spatial_px"``). Set this to whichever key holds the
+            X/Y centroid coordinates in your AnnData (e.g. check with
+            ``list(adata.obsm.keys())``).
         k: Number of neighbors for spatial graph construction.
-        celltype_key: Key in AnnData.obs for cell type labels.
+        celltype_key: Key in ``adata.obs`` containing cell type annotations
+            (default: ``"celltypes"``). Set this to the column name used in
+            your AnnData (e.g. check with ``adata.obs.columns.tolist()``).
         combine_mode: Strategy for combining modality embeddings.
         ae_batch_size: Optional batch size for AE inference.
             If None, an effective batch size is auto-determined for AE
