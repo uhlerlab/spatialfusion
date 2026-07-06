@@ -41,7 +41,7 @@ DEFAULT_AE_CKPT_RELPATH = "spatialfusion-multimodal-ae.pt"
 DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-full-gcn.pt"
 
 
-def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2"]) -> pd.DataFrame:
+def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2", "gated"]) -> pd.DataFrame:
     """
     Combine two embedding matrices according to a specified mode.
 
@@ -57,9 +57,9 @@ def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["avera
         ValueError: If the mode is invalid or embeddings are incompatible.
     """
     mode = mode.lower()
-    if mode not in {"average", "concat", "z1", "z2"}:
+    if mode not in {"average", "concat", "z1", "z2", "gated"}:
         raise ValueError(
-            "combine_mode must be one of: 'average', 'concat', 'z1', 'z2'")
+            "combine_mode must be one of: 'average', 'concat', 'z1', 'z2', 'gated'")
     if mode == "z1":
         return z1.copy()
     if mode == "z2":
@@ -72,7 +72,7 @@ def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["avera
     z1c = z1.loc[common_idx]
     z2c = z2.loc[common_idx]
 
-    if mode == "concat":
+    if mode in ["concat", "gated"]:
         z1c = z1c.copy()
         z2c = z2c.copy()
         z1c.columns = [f"z1_{c}" for c in z1c.columns]
@@ -236,8 +236,9 @@ def ae_from_arrays(
     model: PairedAE,
     inputs: AEInputs,
     device: str = "cuda:0",
-    combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
-    batch_size: Optional[int] = None, 
+    combine_mode: Literal["average", "concat",
+                          "z1", "z2", "gated"] = "average",
+    batch_size: Optional[int] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Run a pretrained PairedAE on in-memory UNI and scGPT embeddings.
@@ -251,7 +252,7 @@ def ae_from_arrays(
         inputs: In-memory inputs containing AnnData and modality embeddings.
         device: Torch device used for inference.
         combine_mode: Strategy for combining modality embeddings.
-            One of {"average", "concat", "z1", "z2"}.
+            One of {"average", "concat", "z1", "z2", "gated"}.
             batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
 
     Returns:
@@ -269,7 +270,7 @@ def ae_from_arrays(
     """
     # determine which inputs are required based on combine_mode
     needs_z1 = True
-    needs_z2 = (combine_mode in ["average", "concat", "z2"])
+    needs_z2 = (combine_mode in ["average", "concat", "z2", "gated"])
 
     idx = inputs.adata.obs_names.astype(str)
 
@@ -340,8 +341,10 @@ def ae_from_arrays(
         z1_np = np.vstack(z1_list) if z1_list else np.array([])
         z2_np = np.vstack(z2_list) if z2_list else np.array([])
 
-        z1_df = pd.DataFrame(z1_np, index=common) if len(z1_np) > 0 else pd.DataFrame(index=common)
-        z2_df = pd.DataFrame(z2_np, index=common) if len(z2_np) > 0 else pd.DataFrame(index=common)
+        z1_df = pd.DataFrame(z1_np, index=common) if len(
+            z1_np) > 0 else pd.DataFrame(index=common)
+        z2_df = pd.DataFrame(z2_np, index=common) if len(
+            z2_np) > 0 else pd.DataFrame(index=common)
 
     else:
         with torch.no_grad():
@@ -352,8 +355,10 @@ def ae_from_arrays(
             z1_t = out.get("z1")
             z2_t = out.get("z2")
 
-        z1_df = pd.DataFrame(z1_t.cpu().numpy(), index=common) if z1_t is not None else pd.DataFrame(index=common)
-        z2_df = pd.DataFrame(z2_t.cpu().numpy(), index=common) if z2_t is not None else pd.DataFrame(index=common)
+        z1_df = pd.DataFrame(z1_t.cpu().numpy(
+        ), index=common) if z1_t is not None else pd.DataFrame(index=common)
+        z2_df = pd.DataFrame(z2_t.cpu().numpy(
+        ), index=common) if z2_t is not None else pd.DataFrame(index=common)
 
     z_joint_df = _combine_embeddings(z1_df, z2_df, combine_mode)
     return z1_df, z2_df, z_joint_df
@@ -427,7 +432,9 @@ class GCNInputs:
     adata_by_sample: Dict[str, sc.AnnData]
 
 
-def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, device: str = "cuda:0") -> GCNAutoencoder:
+def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, hidden_dim: int = 10,
+             num_layers: int = 2, combine_mode='average',
+             device: str = "cuda:0") -> GCNAutoencoder:
     """
     Load a pretrained GCN autoencoder from disk.
 
@@ -440,8 +447,13 @@ def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, device: str = "cuda:0") ->
         A GCNAutoencoder instance in evaluation mode.
     """
     model = GCNAutoencoder(
-        in_dim=in_dim, hidden_dim=10, out_dim=in_dim,
-        node_mask_ratio=0.9, num_layers=2, n_classes=0
+        in_dim=in_dim,
+        hidden_dim=hidden_dim,
+        out_dim=in_dim,
+        node_mask_ratio=0.9,
+        num_layers=num_layers,
+        n_classes=0,
+        combine_mode=combine_mode,
     ).to(device)
     state = torch.load(gcn_ckpt, map_location=device)
     state = {k: v for k, v in state.items() if not k.startswith("classifier.")}
@@ -513,7 +525,7 @@ def gcn_embeddings_from_joint(
     celltype_key: str = "celltypes",
     k: int = 30,
     batch_size: Optional[int] = None,
-    k_hop: int = 2,   
+    k_hop: int = 2,
 ) -> pd.DataFrame:
     """
     Generate GCN embeddings from joint AE embeddings and spatial graphs.
@@ -572,7 +584,10 @@ def run_full_embedding(
     spatial_key: str = "spatial_px",
     k: int = 30,
     celltype_key: str = "celltypes",
-    combine_mode: Literal["average", "concat", "z1", "z2"] = "average",
+    combine_mode: Literal["average", "concat",
+                          "z1", "z2", "gated"] = "average",
+    hidden_dim: int = 10,
+    num_layers: int = 2,
 
     ae_batch_size: Optional[int] = None,
     gcn_batch_size: Optional[int] = None,
@@ -635,13 +650,15 @@ def run_full_embedding(
         ae_model_path = resolve_pkg_ckpt(
             f"checkpoint_dir_ae/{DEFAULT_AE_CKPT_RELPATH}"
         )
-        print(f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
+        print(
+            f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
     # Fallback to packaged pretrained GCN checkpoint when no path/model is provided.
     if gcn_model_path is None and gcn_model is None:
         gcn_model_path = resolve_pkg_ckpt(
             f"checkpoint_dir_gcn/{DEFAULT_GCN_CKPT_RELPATH}"
         )
-        print(f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
+        print(
+            f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
 
     # --- AE stage ---
     if ae_inputs_by_sample is not None:
@@ -656,7 +673,7 @@ def run_full_embedding(
             tmp_state = torch.load(ae_model_path, map_location="cpu")
             # encoder2 layers always start with a weight of shape (latent_dim, d2_dim)
             for key, v in tmp_state.items():
-                if key.startswith("encoder2.model.0.weight"):   # first Linear layer
+                if key.startswith("encoder2.model.0.weight"):
                     d2_dim = v.shape[1]
                     break
 
@@ -729,7 +746,8 @@ def run_full_embedding(
         if gcn_model_path is None:
             raise ValueError("Provide gcn_model or gcn_model_path.")
         gcn_model = load_gcn(
-            gcn_model_path, in_dim=z_joint_df.shape[1], device=device)
+            gcn_model_path, in_dim=z_joint_df.shape[1], hidden_dim=hidden_dim,
+            num_layers=num_layers, combine_mode=combine_mode, device=device)
 
     emb_df = gcn_embeddings_from_joint(
         gcn_model=gcn_model,

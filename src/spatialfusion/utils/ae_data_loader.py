@@ -14,6 +14,21 @@ import random
 import numpy as np
 
 
+# ---------------------------------------------------------
+# Embedding filename registry
+# ---------------------------------------------------------
+
+HE_EMBEDDINGS = {
+    "uni": "UNI",
+    "virchow": "Virchow2",
+}
+
+RNA_EMBEDDINGS = {
+    "scgpt": "scGPT",
+    "nicheformer": "nicheformer",
+}
+
+
 def load_file_with_fallback(base_path, filename_base):
     """
     Attempts to load a DataFrame from CSV or Parquet.
@@ -31,16 +46,25 @@ def load_file_with_fallback(base_path, filename_base):
 
     if csv_path.exists():
         return pd.read_csv(csv_path, index_col=0)
+
     elif parquet_path.exists():
         return pd.read_parquet(parquet_path)
+
     else:
         raise FileNotFoundError(
-            f"Neither {csv_path.name} nor {parquet_path.name} found in {base_path}")
+            f"Neither {csv_path.name} nor "
+            f"{parquet_path.name} found in {base_path}"
+        )
 
 
-def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float = 1e-5) -> pd.DataFrame:
+def safe_standardize(
+    df: pd.DataFrame,
+    fill_value: float = 0.0,
+    min_std: float = 1e-5
+) -> pd.DataFrame:
     """
     Standardizes a DataFrame (z-score per column) while avoiding NaNs and large numbers.
+
     Handles unsafe float16 input by casting to float32 first.
 
     Any column with std < min_std is filled with `fill_value`.
@@ -53,7 +77,8 @@ def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float =
     Returns:
         pd.DataFrame: Standardized DataFrame (float32), no NaNs.
     """
-    # Ensure float32 to prevent float16 overflow and float64 memory bloat
+
+    # prevent float16 overflow + float64 memory blowup
     df = df.astype(np.float32, copy=False)
 
     means = df.mean()
@@ -67,71 +92,154 @@ def safe_standardize(df: pd.DataFrame, fill_value: float = 0.0, min_std: float =
 
     if low_variance_mask.any():
         print(
-            f"⚠️ Columns with std < {min_std} set to {fill_value}: {list(df.columns[low_variance_mask])}")
+            f"⚠️ Columns with std < {min_std} "
+            f"set to {fill_value}: "
+            f"{list(df.columns[low_variance_mask])}"
+        )
 
-    # Final safety check
-    assert np.isfinite(standardized.values).all(
-    ), "Non-finite values in standardized data"
+    # final safety check
+    assert np.isfinite(standardized.values).all(), (
+        "Non-finite values in standardized data"
+    )
 
     return standardized.astype(np.float32)
 
 
-def load_and_preprocess_sample(sample_name, base_path, max_cells=30000):
+def load_and_preprocess_sample(
+    sample_name,
+    base_path,
+    max_cells=30000,
+    he_encoder="uni",
+    rna_encoder="scgpt",
+):
     """
     Loads and preprocesses paired sample embeddings for AE training.
-    - Loads UNI and scGPT embeddings for a sample.
-    - Intersects cell IDs, samples up to max_cells.
-    - Imputes NaNs with mean values.
-    - Standardizes features robustly.
+
+    Steps:
+    - Load selected HE + RNA embeddings
+    - Intersect cell IDs
+    - Randomly sample up to max_cells
+    - Impute NaNs
+    - Standardize features
 
     Args:
         sample_name (str): Sample identifier.
         base_path (str or Path): Directory containing sample data.
         max_cells (int): Maximum number of cells to sample.
+        he_encoder (str): HE encoder name.
+            Options: "uni", "virchow"
+        rna_encoder (str): RNA encoder name.
+            Options: "scgpt", "nicheformer"
 
     Returns:
-        tuple: (std_feat_1, std_feat_2, selected_ids)
-            std_feat_1 (pd.DataFrame): Standardized UNI features.
-            std_feat_2 (pd.DataFrame): Standardized scGPT features.
-            selected_ids (list): List of selected cell IDs.
+        tuple:
+            std_feat_1 (pd.DataFrame):
+                Standardized HE features
+
+            std_feat_2 (pd.DataFrame):
+                Standardized RNA features
+
+            selected_ids (list):
+                Selected cell IDs
     """
+
+    he_encoder = he_encoder.lower()
+    rna_encoder = rna_encoder.lower()
+
+    if he_encoder not in HE_EMBEDDINGS:
+        raise ValueError(
+            f"Unknown HE encoder: {he_encoder}. "
+            f"Valid options: {list(HE_EMBEDDINGS.keys())}"
+        )
+
+    if rna_encoder not in RNA_EMBEDDINGS:
+        raise ValueError(
+            f"Unknown RNA encoder: {rna_encoder}. "
+            f"Valid options: {list(RNA_EMBEDDINGS.keys())}"
+        )
+
     datapath = pl.Path(base_path) / sample_name
     embedding_path = datapath / "embeddings"
 
-    # Load either .csv or .parquet
-    uni = load_file_with_fallback(embedding_path, "UNI")
-    scgpt = load_file_with_fallback(embedding_path, "scGPT")
+    he_file = HE_EMBEDDINGS[he_encoder]
+    rna_file = RNA_EMBEDDINGS[rna_encoder]
 
+    print(
+        f"[{sample_name}] "
+        f"Loading HE={he_encoder} ({he_file}) | "
+        f"RNA={rna_encoder} ({rna_file})"
+    )
+
+    # ---------------------------------------------------------
+    # Load embeddings
+    # ---------------------------------------------------------
+
+    he_df = load_file_with_fallback(
+        embedding_path,
+        he_file
+    )
+
+    rna_df = load_file_with_fallback(
+        embedding_path,
+        rna_file
+    )
+
+    # ---------------------------------------------------------
     # Intersect cell IDs
-    cell_ids = set(uni.index).intersection(scgpt.index)
+    # ---------------------------------------------------------
+
+    cell_ids = set(he_df.index).intersection(rna_df.index)
+
     if not cell_ids:
-        raise ValueError(f"No common cells found in {sample_name}.")
+        raise ValueError(
+            f"No common cells found in {sample_name}."
+        )
 
     common_ids = list(cell_ids)
+
     n_cells = min(len(common_ids), max_cells)
+
     selected_ids = random.sample(common_ids, n_cells)
 
-    patho_feat = uni.loc[selected_ids]
-    transcr_feat = scgpt.loc[selected_ids]
+    he_feat = he_df.loc[selected_ids]
+    rna_feat = rna_df.loc[selected_ids]
 
-    # Impute NaNs
-    patho_nans = patho_feat.isna().any()
-    transcr_nans = transcr_feat.isna().any()
+    # ---------------------------------------------------------
+    # NaN imputation
+    # ---------------------------------------------------------
 
-    if patho_nans.any():
-        bad_dims = list(patho_nans[patho_nans].index)
+    he_nans = he_feat.isna().any()
+    rna_nans = rna_feat.isna().any()
+
+    if he_nans.any():
+
+        bad_dims = list(he_nans[he_nans].index)
+
         warnings.warn(
-            f"[{sample_name}] UNI has NaNs in dims: {bad_dims}. Applying mean imputation.")
-        patho_feat = patho_feat.fillna(patho_feat.mean())
+            f"[{sample_name}] "
+            f"{he_file} has NaNs in dims: {bad_dims}. "
+            f"Applying mean imputation."
+        )
 
-    if transcr_nans.any():
-        bad_dims = list(transcr_nans[transcr_nans].index)
+        he_feat = he_feat.fillna(he_feat.mean())
+
+    if rna_nans.any():
+
+        bad_dims = list(rna_nans[rna_nans].index)
+
         warnings.warn(
-            f"[{sample_name}] scGPT has NaNs in dims: {bad_dims}. Applying mean imputation.")
-        transcr_feat = transcr_feat.fillna(transcr_feat.mean())
+            f"[{sample_name}] "
+            f"{rna_file} has NaNs in dims: {bad_dims}. "
+            f"Applying mean imputation."
+        )
 
-    # Safe Standardization
-    std_feat_1 = safe_standardize(patho_feat)
-    std_feat_2 = safe_standardize(transcr_feat)
+        rna_feat = rna_feat.fillna(rna_feat.mean())
+
+    # ---------------------------------------------------------
+    # Standardization
+    # ---------------------------------------------------------
+
+    std_feat_1 = safe_standardize(he_feat)
+    std_feat_2 = safe_standardize(rna_feat)
 
     return std_feat_1, std_feat_2, selected_ids
