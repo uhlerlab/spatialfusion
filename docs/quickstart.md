@@ -19,8 +19,8 @@ sample_name = 'sample1'
 ae_inputs_by_sample = {
     sample_name: AEInputs(
         adata=adata,
-        z_uni=uni_df,
-        z_scgpt=scgpt_df,
+        z_he=uni_df,
+        z_rna=scgpt_df,
     ),
 }
 

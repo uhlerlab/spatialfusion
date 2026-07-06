@@ -168,12 +168,13 @@ class AEInputs:
 
     Attributes:
         adata: AnnData object containing spatial metadata.
-        z_uni: UNI embeddings indexed by cell.
-        z_scgpt: Optional scGPT embeddings indexed by cell.
+        z_he: H&E foundation model embeddings indexed by cell (UNI or Virchow).
+        z_rna: Optional RNA foundation model embeddings indexed by cell
+            (scGPT or Nicheformer).
     """
     adata: sc.AnnData
-    z_uni: pd.DataFrame
-    z_scgpt: Optional[pd.DataFrame] = None   # ← allow None
+    z_he: pd.DataFrame
+    z_rna: Optional[pd.DataFrame] = None   # ← allow None
 
 
 def load_paired_ae(ae_ckpt: Union[str, Path], d1_dim: int, d2_dim: int,
@@ -275,23 +276,23 @@ def ae_from_arrays(
     idx = inputs.adata.obs_names.astype(str)
 
     if needs_z1:
-        common = idx.intersection(inputs.z_uni.index)
+        common = idx.intersection(inputs.z_he.index)
     if needs_z2:
-        if inputs.z_scgpt is None:
+        if inputs.z_rna is None:
             raise ValueError(
-                "combine_mode requires scGPT input, but z_scgpt=None")
-        common = common.intersection(inputs.z_scgpt.index)
+                "combine_mode requires RNA input, but z_rna=None")
+        common = common.intersection(inputs.z_rna.index)
 
     if len(common) == 0:
         raise ValueError(
             "No overlapping cells between adata and required embeddings.")
 
     # --- Standardize before feeding to AE
-    x1_df = safe_standardize(inputs.z_uni.loc[common])
+    x1_df = safe_standardize(inputs.z_he.loc[common])
     x1_np = x1_df.astype(np.float32).values
 
     if needs_z2:
-        x2_df = safe_standardize(inputs.z_scgpt.loc[common])
+        x2_df = safe_standardize(inputs.z_rna.loc[common])
         x2_np = x2_df.astype(np.float32).values
     else:
         x2_np = None
@@ -683,9 +684,9 @@ def run_full_embedding(
         # In-memory branch
         # infer dims from the first sample’s matrices
         first = next(iter(ae_inputs_by_sample.values()))
-        d1_dim = first.z_uni.shape[1]
-        if first.z_scgpt is not None:
-            d2_dim = first.z_scgpt.shape[1]
+        d1_dim = first.z_he.shape[1]
+        if first.z_rna is not None:
+            d2_dim = first.z_rna.shape[1]
         else:
             # load temporarily to inspect expected input dim
             tmp_state = torch.load(ae_model_path, map_location="cpu")
