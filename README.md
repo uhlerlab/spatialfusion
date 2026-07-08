@@ -14,7 +14,7 @@ The method operates at **single-cell resolution**, and can be applied to:
 
 By combining molecular and morphological features, SpatialFusion captures coordinated patterns of tissue architecture and gene expression. A key design principle is a biologically informed definition of niches: not simply spatial neighborhoods, but **reproducible microenvironments** characterized by pathway-level activation signatures and functional coherence across tissues. To reflect this prior, the latent space of the model is trained to encode biologically meaningful pathway activations, enabling robust discovery of integrated niches.
 
-The method is described in the paper: [SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping](https://doi.org/10.64898/2026.03.16.712056).
+The method is described in the paper: [SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping](https://doi.org/10.64898/2026.03.16.712056).
 
 You can find detailed documentation at https://uhlerlab.github.io/spatialfusion/
 
@@ -110,6 +110,44 @@ PY
   export SPATIALFUSION_ROOT=/your/path
   ```
 * CPU installations work everywhere but are significantly slower.
+
+---
+
+## Tutorials
+
+A complete tutorial notebook to embed / finetune SpatialFusion on a sample is available at:
+
+```
+tutorials/embed-and-finetune-sample.ipynb
+```
+
+To get unimodal embeddings, we provide instructions or a tutorial at: 
+
+```
+tutorials/get-unimodal-embeddings-sample.ipynb
+```
+
+To run SpatialFusion on H&E only, we provide a tutorial at: 
+
+```
+tutorials/embed-he-only.ipynb
+```
+
+Additional packages for the foundation models you choose must be installed manually:
+
+- **scGPT**: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
+- **Nicheformer**: [https://github.com/theislab/nicheformer](https://github.com/theislab/nicheformer)
+- **UNI**: [https://huggingface.co/MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)
+- **Virchow**: [https://huggingface.co/paige-ai/Virchow2](https://huggingface.co/paige-ai/Virchow2)
+
+We also provide a ready-to-use environment file:
+
+```
+spatialfusion_env.yml
+```
+
+Tutorial data is available on Zenodo:
+[https://zenodo.org/records/17594071](https://zenodo.org/records/17594071)
 
 ---
 
@@ -218,32 +256,6 @@ Used to compute morphology embeddings with your chosen H&E foundation model (**U
 
 ---
 
-## Tutorials
-
-A complete tutorial notebook is available at:
-
-```
-tutorials/embed-and-finetune-sample.ipynb
-```
-
-Additional packages for the foundation models you choose must be installed manually:
-
-- **scGPT**: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
-- **Nicheformer**: [https://github.com/theislab/nicheformer](https://github.com/theislab/nicheformer)
-- **UNI**: [https://huggingface.co/MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)
-- **Virchow**: [https://huggingface.co/paige-ai/Virchow2](https://huggingface.co/paige-ai/Virchow2)
-
-We also provide a ready-to-use environment file:
-
-```
-spatialfusion_env.yml
-```
-
-Tutorial data is available on Zenodo:
-[https://zenodo.org/records/17594071](https://zenodo.org/records/17594071)
-
----
-
 ## Repository Structure
 
 ```
@@ -296,7 +308,7 @@ Tutorial data is available on Zenodo:
 
 If you use SpatialFusion, please cite:
 
-> Yates J, Shavakhi M, Choueiri T, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
+> Yates J, Shavakhi M, Choueiri T, Camp SC, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
 
 ---
 
