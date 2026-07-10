@@ -37,8 +37,8 @@ from spatialfusion.utils.pkg_ckpt import resolve_pkg_ckpt
 # Small utilities
 # ---------------------------
 
-DEFAULT_AE_CKPT_RELPATH = "spatialfusion-multimodal-ae.pt"
-DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-full-gcn.pt"
+DEFAULT_AE_CKPT_RELPATH = "spatialfusion-ae-uni-scgpt.pt"
+DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-gcn-uni-scgpt.pt"
 
 
 def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2", "gated"]) -> pd.DataFrame:

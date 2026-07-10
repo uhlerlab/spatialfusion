@@ -29,8 +29,8 @@ from spatialfusion.utils.gcn_utils import build_knn_graph, generate_overlapping_
 from spatialfusion.models.gcn import GCNAutoencoder
 from spatialfusion.utils.pkg_ckpt import resolve_pkg_ckpt
 
-DEFAULT_AE_CKPT_RELPATH = "spatialfusion-multimodal-ae.pt"
-DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-full-gcn.pt"
+DEFAULT_AE_CKPT_RELPATH = "spatialfusion-ae-uni-scgpt.pt"
+DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-gcn-uni-scgpt.pt"
 
 
 # ---------------------------------------------------------------
