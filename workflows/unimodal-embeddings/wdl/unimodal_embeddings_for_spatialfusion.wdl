@@ -111,8 +111,7 @@ task RunScgptEmbedding {
   command <<<
     set -eu -o pipefail
 
-    python /app/unimodal-embeddings.py \
-      --mode scgpt \
+    python /app/embed_scgpt.py \
       --adata "~{adata}" \
       --output-dir "." \
       --scgpt-weights "/app/scgpt_weights" \
@@ -183,8 +182,7 @@ task RunUniEmbedding {
   command <<<
     set -eu -o pipefail
 
-    python /app/unimodal-embeddings.py \
-      --mode uni \
+    python /app/embed_uni.py \
       --adata "~{adata}" \
       --wsi "~{wsi}" \
       --output-dir "." \

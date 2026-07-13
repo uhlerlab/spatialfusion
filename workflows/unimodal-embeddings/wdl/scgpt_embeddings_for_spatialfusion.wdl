@@ -90,8 +90,7 @@ task RunScgptEmbedding {
   command <<<
     set -eu -o pipefail
 
-    python /app/unimodal-embeddings.py \
-      --mode scgpt \
+    python /app/embed_scgpt.py \
       --adata "~{adata}" \
       --output-dir "." \
       --scgpt-weights "/app/scgpt_weights" \

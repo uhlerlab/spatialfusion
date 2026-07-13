@@ -80,8 +80,7 @@ task RunUniEmbedding {
   command <<<
     set -eu -o pipefail
 
-    python /app/unimodal-embeddings.py \
-      --mode uni \
+    python /app/embed_uni.py \
       --adata "~{adata}" \
       --wsi "~{wsi}" \
       --output-dir "." \
