@@ -308,7 +308,7 @@ Used to compute morphology embeddings with your chosen H&E foundation model (**U
 
 If you use SpatialFusion, please cite:
 
-> Yates J, Shavakhi M, Choueiri T, Camp SC, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
+> Yates J, Shavakhi M, Choueiri T, Camp SY, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
 
 ---
 
