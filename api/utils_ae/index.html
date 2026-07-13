@@ -1049,16 +1049,47 @@
 
 
 <h3 id="spatialfusion.utils.embed_ae_utils.extract_embeddings_for_all_samples" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">extract_embeddings_for_all_samples</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">extract_embeddings_for_all_samples</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">sample_list</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">he_encoder</span><span class="o">=</span><span class="s1">&#39;uni&#39;</span><span class="p">,</span> <span class="n">rna_encoder</span><span class="o">=</span><span class="s1">&#39;scgpt&#39;</span><span class="p">)</span></code>
 
 </h3>
 
 
     <div class="doc doc-contents ">
 
-        <p>Extract embeddings for all samples using a trained AE model.
-Loads UNI and scGPT embeddings, matches cell IDs, standardizes features, and computes model embeddings.
-Also extracts cell type labels and sample names.</p>
+        <p>Extract latent embeddings for all samples using a trained paired AE.</p>
+<p>This function:</p>
+<ol>
+<li>
+<p>Loads the requested HE embeddings
+   (UNI or Virchow).</p>
+</li>
+<li>
+<p>Loads the requested RNA embeddings
+   (scGPT or Nicheformer).</p>
+</li>
+<li>
+<p>Intersects cell identifiers across:</p>
+</li>
+<li>HE embeddings</li>
+<li>RNA embeddings</li>
+<li>
+<p>cell type annotations</p>
+</li>
+<li>
+<p>Standardizes both modalities.</p>
+</li>
+<li>
+<p>Computes latent representations using:</p>
+</li>
+<li>encoder1 (HE branch)</li>
+<li>
+<p>encoder2 (RNA branch)</p>
+</li>
+<li>
+<p>Computes a joint embedding via arithmetic mean:
+       z_joint = (z1 + z2) / 2</p>
+</li>
+</ol>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1080,7 +1111,7 @@ Also extracts cell type labels and sample names.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Trained AE model with encoder1 and encoder2.</p>
+                <p>Trained PairedAE model.</p>
               </div>
             </td>
             <td>
@@ -1092,11 +1123,10 @@ Also extracts cell type labels and sample names.</p>
                 <code>sample_list</code>
             </td>
             <td>
-                  <code><span title="list">list</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>List of sample info (str or dict).</p>
+                <p>List of sample names or sample dictionaries.</p>
               </div>
             </td>
             <td>
@@ -1108,11 +1138,10 @@ Also extracts cell type labels and sample names.</p>
                 <code>base_path</code>
             </td>
             <td>
-                  <code><span title="str">str</span> or <span title="Path">Path</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Base directory for samples.</p>
+                <p>Root directory containing sample folders.</p>
               </div>
             </td>
             <td>
@@ -1124,11 +1153,10 @@ Also extracts cell type labels and sample names.</p>
                 <code>device</code>
             </td>
             <td>
-                  <code><span title="str">str</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Device for model inference.</p>
+                <p>Torch device for inference.</p>
               </div>
             </td>
             <td>
@@ -1140,16 +1168,51 @@ Also extracts cell type labels and sample names.</p>
                 <code>batch_size</code>
             </td>
             <td>
-                  <code><span title="Optional">Optional</span>[<span title="int">int</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Batch size for AE inference. If None, an
-effective batch size is auto-determined per sample.</p>
+                <p>Optional inference batch size.
+If None, a memory-aware batch size is chosen.</p>
               </div>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>he_encoder</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>HE embedding type.</p>
+<p>Supported:
+    - "uni"
+    - "virchow"</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;uni&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rna_encoder</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RNA embedding type.</p>
+<p>Supported:
+    - "scgpt"
+    - "nicheformer"</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;scgpt&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1170,12 +1233,18 @@ effective batch size is auto-determined per sample.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>(z1_df, z2_df, z_joint_df, celltypes, samples)
-z1_df (pd.DataFrame): Embeddings from encoder1.
-z2_df (pd.DataFrame): Embeddings from encoder2.
-z_joint_df (pd.DataFrame): Averaged joint embeddings.
-celltypes (np.ndarray): Cell type labels.
-samples (np.ndarray): Sample names.</p>
+                <p>z1_df:
+    Latent embeddings from encoder1
+    (HE modality).</p>
+<p>z2_df:
+    Latent embeddings from encoder2
+    (RNA modality).</p>
+<p>z_joint_df:
+    Averaged latent embeddings.</p>
+<p>celltypes:
+    Cell type labels.</p>
+<p>samples:
+    Sample identifiers.</p>
               </div>
             </td>
           </tr>
@@ -1504,18 +1573,20 @@ Handles unsafe float16 input by casting to float32 first.</p>
 
 
 <h3 id="spatialfusion.utils.ae_data_loader.load_and_preprocess_sample" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load_and_preprocess_sample</span><span class="p">(</span><span class="n">sample_name</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">max_cells</span><span class="o">=</span><span class="mi">30000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">load_and_preprocess_sample</span><span class="p">(</span><span class="n">sample_name</span><span class="p">,</span> <span class="n">base_path</span><span class="p">,</span> <span class="n">max_cells</span><span class="o">=</span><span class="mi">30000</span><span class="p">,</span> <span class="n">he_encoder</span><span class="o">=</span><span class="s1">&#39;uni&#39;</span><span class="p">,</span> <span class="n">rna_encoder</span><span class="o">=</span><span class="s1">&#39;scgpt&#39;</span><span class="p">)</span></code>
 
 </h3>
 
 
     <div class="doc doc-contents ">
 
-        <p>Loads and preprocesses paired sample embeddings for AE training.
-- Loads UNI and scGPT embeddings for a sample.
-- Intersects cell IDs, samples up to max_cells.
-- Imputes NaNs with mean values.
-- Standardizes features robustly.</p>
+        <p>Loads and preprocesses paired sample embeddings for AE training.</p>
+<p>Steps:
+- Load selected HE + RNA embeddings
+- Intersect cell IDs
+- Randomly sample up to max_cells
+- Impute NaNs
+- Standardize features</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1577,6 +1648,40 @@ Handles unsafe float16 input by casting to float32 first.</p>
                   <code>30000</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>he_encoder</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>HE encoder name.
+Options: "uni", "virchow"</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;uni&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rna_encoder</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RNA encoder name.
+Options: "scgpt", "nicheformer"</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;scgpt&#39;</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1595,10 +1700,12 @@ Handles unsafe float16 input by casting to float32 first.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>(std_feat_1, std_feat_2, selected_ids)
-std_feat_1 (pd.DataFrame): Standardized UNI features.
-std_feat_2 (pd.DataFrame): Standardized scGPT features.
-selected_ids (list): List of selected cell IDs.</p>
+                <p>std_feat_1 (pd.DataFrame):
+    Standardized HE features</p>
+<p>std_feat_2 (pd.DataFrame):
+    Standardized RNA features</p>
+<p>selected_ids (list):
+    Selected cell IDs</p>
               </div>
             </td>
           </tr>
@@ -1709,8 +1816,8 @@ Raises FileNotFoundError if neither is available.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Standardizes a DataFrame (z-score per column) while avoiding NaNs and large numbers.
-Handles unsafe float16 input by casting to float32 first.</p>
+        <p>Standardizes a DataFrame (z-score per column) while avoiding NaNs and large numbers.</p>
+<p>Handles unsafe float16 input by casting to float32 first.</p>
 <p>Any column with std &lt; min_std is filled with <code>fill_value</code>.</p>
 
 

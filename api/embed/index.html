@@ -1167,24 +1167,25 @@ for SpatialFusion.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="spatialfusion.embed.embed.AEInputs.z_uni">z_uni</span></code></td>
+            <td><code><span title="spatialfusion.embed.embed.AEInputs.z_he">z_he</span></code></td>
             <td>
                   <code><span title="pandas.DataFrame">DataFrame</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>UNI embeddings indexed by cell.</p>
+                <p>H&amp;E foundation model embeddings indexed by cell (UNI or Virchow).</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="spatialfusion.embed.embed.AEInputs.z_scgpt">z_scgpt</span></code></td>
+            <td><code><span title="spatialfusion.embed.embed.AEInputs.z_rna">z_rna</span></code></td>
             <td>
                   <code><span title="typing.Optional">Optional</span>[<span title="pandas.DataFrame">DataFrame</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional scGPT embeddings indexed by cell.</p>
+                <p>Optional RNA foundation model embeddings indexed by cell
+(scGPT or Nicheformer).</p>
               </div>
             </td>
           </tr>
@@ -1394,17 +1395,32 @@ resulting latent representations according to <code>combine_mode</code>.</p>
                 <code>combine_mode</code>
             </td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;average&#39;, &#39;concat&#39;, &#39;z1&#39;, &#39;z2&#39;]</code>
+                  <code><span title="typing.Literal">Literal</span>[&#39;average&#39;, &#39;concat&#39;, &#39;z1&#39;, &#39;z2&#39;, &#39;gated&#39;]</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>Strategy for combining modality embeddings.
-One of {"average", "concat", "z1", "z2"}.
-batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.</p>
+One of {"average", "concat", "z1", "z2", "gated"}.</p>
               </div>
             </td>
             <td>
                   <code>&#39;average&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>batch_size</code>
+            </td>
+            <td>
+                  <code><span title="typing.Optional">Optional</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -1578,7 +1594,9 @@ saves the outputs to disk.</p>
             <td>
               <div class="doc-md-description">
                 <p>Strategy for combining modality embeddings.
-One of {"average", "concat", "z1", "z2"}.</p>
+One of {"average", "concat", "z1", "z2"}. Note: "gated" is not
+supported for disk-based loading; use the in-memory path
+(<code>ae_from_arrays</code>) if you need the "gated" mode.</p>
               </div>
             </td>
             <td>
@@ -1767,7 +1785,9 @@ metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Key in AnnData.obsm containing spatial coordinates.</p>
+                <p>Key in <code>adata.obsm</code> containing spatial coordinates
+(default: <code>"spatial"</code>). Set this to whichever key holds the
+X/Y centroid coordinates in your AnnData.</p>
               </div>
             </td>
             <td>
@@ -1783,7 +1803,9 @@ metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Key in AnnData.obs containing cell type annotations.</p>
+                <p>Key in <code>adata.obs</code> containing cell type annotations
+(default: <code>"celltypes"</code>). Set this to the column name used in
+your AnnData.</p>
               </div>
             </td>
             <td>
@@ -1940,7 +1962,9 @@ metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Key in <code>adata.obsm</code> containing spatial coordinates.</p>
+                <p>Key in <code>adata.obsm</code> containing spatial coordinates
+(default: <code>"spatial"</code>). Set this to whichever key holds the
+X/Y centroid coordinates in your AnnData.</p>
               </div>
             </td>
             <td>
@@ -2231,7 +2255,7 @@ metadata.</p>
 
 
 <h3 id="spatialfusion.embed.embed.load_gcn" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load_gcn</span><span class="p">(</span><span class="n">gcn_ckpt</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">load_gcn</span><span class="p">(</span><span class="n">gcn_ckpt</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2282,6 +2306,57 @@ metadata.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>hidden_dim</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Hidden layer dimensionality of the GCN. Must match the
+value used when the checkpoint was trained (default: 10).</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_layers</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of GCN layers. Must match the checkpoint (default: 2).</p>
+              </div>
+            </td>
+            <td>
+                  <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>combine_mode</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Embedding combination strategy the GCN was trained with.
+One of {"average", "concat", "z1", "z2", "gated"}.
+Only use gated mode with checkpoints trained with gated fusion
+parameters (not provided with the package).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;average&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -2471,7 +2546,7 @@ metadata.</p>
 
 
 <h3 id="spatialfusion.embed.embed.run_full_embedding" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">run_full_embedding</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">ae_inputs_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">ae_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k_hop</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">uni_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scgpt_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_ae_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">run_full_embedding</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">ae_inputs_by_sample</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">base_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ae_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">,</span> <span class="n">spatial_key</span><span class="o">=</span><span class="s1">&#39;spatial_px&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">celltype_key</span><span class="o">=</span><span class="s1">&#39;celltypes&#39;</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ae_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gcn_batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k_hop</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">uni_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scgpt_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_ae_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
@@ -2660,7 +2735,10 @@ If omitted, the packaged pretrained GCN checkpoint is used.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Key in AnnData.obsm for spatial coordinates.</p>
+                <p>Key in <code>adata.obsm</code> containing spatial coordinates
+(default: <code>"spatial_px"</code>). Set this to whichever key holds the
+X/Y centroid coordinates in your AnnData (e.g. check with
+<code>list(adata.obsm.keys())</code>).</p>
               </div>
             </td>
             <td>
@@ -2692,7 +2770,9 @@ If omitted, the packaged pretrained GCN checkpoint is used.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Key in AnnData.obs for cell type labels.</p>
+                <p>Key in <code>adata.obs</code> containing cell type annotations
+(default: <code>"celltypes"</code>). Set this to the column name used in
+your AnnData (e.g. check with <code>adata.obs.columns.tolist()</code>).</p>
               </div>
             </td>
             <td>
@@ -2704,11 +2784,13 @@ If omitted, the packaged pretrained GCN checkpoint is used.</p>
                 <code>combine_mode</code>
             </td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;average&#39;, &#39;concat&#39;, &#39;z1&#39;, &#39;z2&#39;]</code>
+                  <code><span title="typing.Literal">Literal</span>[&#39;average&#39;, &#39;concat&#39;, &#39;z1&#39;, &#39;z2&#39;, &#39;gated&#39;]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Strategy for combining modality embeddings.</p>
+                <p>Strategy for combining modality embeddings.
+Only use gated mode with checkpoints trained with gated fusion
+parameters (not provided with the package).</p>
               </div>
             </td>
             <td>

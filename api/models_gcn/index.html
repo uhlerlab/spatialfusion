@@ -639,17 +639,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#spatialfusion.models.gcn.GCNAutoencoder.encode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        encode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#spatialfusion.models.gcn.GCNAutoencoder.forward" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -880,17 +869,6 @@
     <span class="md-ellipsis">
       
         __init__
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#spatialfusion.models.gcn.GCNAutoencoder.encode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        encode
       
     </span>
   </a>
@@ -1168,7 +1146,7 @@ If 0, no classification head is used.</p>
 
 
 <h4 id="spatialfusion.models.gcn.GCNAutoencoder.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">node_mask_ratio</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">noise_std</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_classes</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">in_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">node_mask_ratio</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">noise_std</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">n_classes</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">combine_mode</span><span class="o">=</span><span class="s1">&#39;average&#39;</span><span class="p">)</span></code>
 
 </h4>
 
@@ -1316,94 +1294,6 @@ If greater than zero, a classification head is created.</p>
             </td>
             <td>
                   <code>0</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="spatialfusion.models.gcn.GCNAutoencoder.encode" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">encode</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">feat</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Encode node features using stacked GCN layers.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>g</code>
-            </td>
-            <td>
-                  <code><span title="dgl.DGLGraph">DGLGraph</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Input DGL graph.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>feat</code>
-            </td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Input node feature tensor of shape (num_nodes, in_dim).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Tensor of shape (num_nodes, hidden_dim) containing latent node embeddings.</p>
-              </div>
             </td>
           </tr>
       </tbody>
