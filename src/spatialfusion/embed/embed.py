@@ -254,7 +254,7 @@ def ae_from_arrays(
         device: Torch device used for inference.
         combine_mode: Strategy for combining modality embeddings.
             One of {"average", "concat", "z1", "z2", "gated"}.
-            batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
+        batch_size: Optional batch size for processing. If None, it will be auto-determined based on input size and available memory.
 
     Returns:
         A tuple `(z1_df, z2_df, z_joint_df)` where:
@@ -449,6 +449,8 @@ def load_gcn(gcn_ckpt: Union[str, Path], in_dim: int, hidden_dim: int = 10,
         num_layers: Number of GCN layers. Must match the checkpoint (default: 2).
         combine_mode: Embedding combination strategy the GCN was trained with.
             One of {"average", "concat", "z1", "z2", "gated"}.
+            Only use gated mode with checkpoints trained with gated fusion
+            parameters (not provided with the package).
         device: Torch device on which to load the model.
 
     Returns:
@@ -648,6 +650,8 @@ def run_full_embedding(
             (default: ``"celltypes"``). Set this to the column name used in
             your AnnData (e.g. check with ``adata.obs.columns.tolist()``).
         combine_mode: Strategy for combining modality embeddings.
+            Only use gated mode with checkpoints trained with gated fusion
+            parameters (not provided with the package).
         ae_batch_size: Optional batch size for AE inference.
             If None, an effective batch size is auto-determined for AE
             processing.
