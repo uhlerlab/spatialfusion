@@ -13,7 +13,6 @@ plugins:
           options:
             docstring_style: google
             show_source: false
-            show_private_members: false
             show_root_heading: true
 
 nav:
