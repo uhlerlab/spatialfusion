@@ -8,7 +8,9 @@ Before running SpatialFusion, you need to generate unimodal embeddings from:
 - H&E / whole-slide images → using **UNI**
 
 
-This step requires a GPU to run efficiently and we provide two ways to run it.
+This step requires a GPU to run efficiently. The current workflow scripts,
+Docker image, and WDLs generate scGPT and/or UNI embeddings. To generate other
+supported embeddings, please follow the [unimodal embedding tutorial notebook](https://github.com/uhlerlab/spatialfusion/tree/main/tutorials/get-unimodal-embeddings-sample.ipynb).
 
 ## Which workflow should I choose?
 

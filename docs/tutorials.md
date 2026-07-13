@@ -11,8 +11,11 @@ We also provide a tutorial for the H&E only case:
 tutorials/embed-he-only.ipynb
 ```
 
-Additional required packages (scGPT, UNI dependencies) must be installed manually.
-Follow the instructions at: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
+We also provide a tutorial for generating unimodal embeddings:
+
+```
+tutorials/get-unimodal-embeddings-sample.ipynb
+```
 
 We also provide a ready-to-use environment file:
 

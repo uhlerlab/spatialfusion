@@ -43,7 +43,7 @@ dependencies = [
   "h5py>=3.8"                     
 ]
 
-version = "0.1.0"
+version = "0.2.0"
 
 [project.optional-dependencies]
 # Choose one of these during install; do NOT include in default deps.
@@ -83,6 +83,6 @@ testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [project.urls]
-Homepage = "https://github.com/your-org/spatialfusion"
-Documentation = "https://readthedocs.org/projects/your-docs"
-Issues = "https://github.com/your-org/spatialfusion/issues"
+Homepage = "https://github.com/uhlerlab/spatialfusion"
+Documentation = "https://uhlerlab.github.io/spatialfusion/"
+Issues = "https://github.com/uhlerlab/spatialfusion/issues"

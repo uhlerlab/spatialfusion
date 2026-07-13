@@ -14,17 +14,21 @@ The method operates at **single-cell resolution**, and can be applied to:
 
 By combining molecular and morphological features, SpatialFusion captures coordinated patterns of tissue architecture and gene expression. A key design principle is a biologically informed definition of niches: not simply spatial neighborhoods, but **reproducible microenvironments** characterized by pathway-level activation signatures and functional coherence across tissues. To reflect this prior, the latent space of the model is trained to encode biologically meaningful pathway activations, enabling robust discovery of integrated niches.
 
-The method is described in the paper: [SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping](https://doi.org/10.64898/2026.03.16.712056).
+The method is described in the paper: [SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping](https://doi.org/10.64898/2026.03.16.712056).
 
 You can find detailed documentation at https://uhlerlab.github.io/spatialfusion/
 
 ---
 ## Prepare SpatialFusion inputs
-Before running SpatialFusion, you need to generate unimodal embeddings from:
-- spatial transcriptomics data → using **scGPT**
-- H&E / whole-slide images → using **UNI**
 
-We provide two ways to generate these, detailed on our [documentation website](https://uhlerlab.github.io/spatialfusion/unimodal-embeddings/).
+Before running SpatialFusion, you need to generate unimodal embeddings from two modalities. You can choose which foundation model to use for each:
+
+| Modality | Supported models |
+| -------- | --------------- |
+| H&E / whole-slide image | [UNI](https://huggingface.co/MahmoodLab/UNI2-h) · [Virchow](https://huggingface.co/paige-ai/Virchow2) |
+| Spatial transcriptomics | [scGPT](https://github.com/bowang-lab/scGPT) · [Nicheformer](https://github.com/theislab/nicheformer) |
+
+We provide Dockstore workflows for generating these embeddings, detailed on our [documentation website](https://uhlerlab.github.io/spatialfusion/unimodal-embeddings/).
 ## Installation
 
 ### 1. Create virtual environment
@@ -109,39 +113,107 @@ PY
 
 ---
 
+## Tutorials
+
+A complete tutorial notebook to embed / finetune SpatialFusion on a sample is available at:
+
+```
+tutorials/embed-and-finetune-sample.ipynb
+```
+
+To get unimodal embeddings, we provide instructions or a tutorial at: 
+
+```
+tutorials/get-unimodal-embeddings-sample.ipynb
+```
+
+To run SpatialFusion on H&E only, we provide a tutorial at: 
+
+```
+tutorials/embed-he-only.ipynb
+```
+
+Additional packages for the foundation models you choose must be installed manually:
+
+- **scGPT**: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
+- **Nicheformer**: [https://github.com/theislab/nicheformer](https://github.com/theislab/nicheformer)
+- **UNI**: [https://huggingface.co/MahmoodLab/UNI2-h](https://huggingface.co/MahmoodLab/UNI2-h)
+- **Virchow**: [https://huggingface.co/paige-ai/Virchow2](https://huggingface.co/paige-ai/Virchow2)
+
+We also provide a ready-to-use environment file:
+
+```
+spatialfusion_env.yml
+```
+
+Tutorial data is available on Zenodo:
+[https://zenodo.org/records/17594071](https://zenodo.org/records/17594071)
+
+---
+
+## Pretrained Weights
+
+SpatialFusion ships pretrained checkpoints for every combination of supported foundation models. Select the pair that matches the embeddings you generated:
+
+| H&E model | RNA model | AE checkpoint | GCN checkpoint |
+| --------- | --------- | ------------- | -------------- |
+| UNI | scGPT | `spatialfusion-ae-uni-scgpt.pt` | `spatialfusion-gcn-uni-scgpt.pt` |
+| UNI | Nicheformer | `spatialfusion-ae-uni-nicheformer.pt` | `spatialfusion-gcn-uni-nicheformer.pt` |
+| Virchow | scGPT | `spatialfusion-ae-virchow-scgpt.pt` | `spatialfusion-gcn-virchow-scgpt.pt` |
+| Virchow | Nicheformer | `spatialfusion-ae-virchow-nicheformer.pt` | `spatialfusion-gcn-virchow-nicheformer.pt` |
+| UNI | *(H&E only)* | — | `spatialfusion-he-gcn-uni-scgpt.pt` |
+
+All checkpoints are bundled with the package under `src/spatialfusion/data/` and are resolved automatically via `spatialfusion.utils.pkg_ckpt.resolve_pkg_ckpt`.
+
+---
+
 ## Usage Example
 
-A minimal example showing how to embed a dataset using the pretrained AE and GCN:
+A minimal example showing how to embed a dataset using the pretrained AE and GCN. Swap in the checkpoint filenames that match your chosen foundation models (see the table above):
 
 ```python
 from spatialfusion.embed.embed import AEInputs, run_full_embedding
+from spatialfusion.utils.pkg_ckpt import resolve_pkg_ckpt
 import pandas as pd
 import scanpy as sc
 
-# Load external embeddings (UNI + scGPT)
-uni_df = pd.read_parquet('UNI.parquet')
-scgpt_df = pd.read_parquet('scGPT.parquet')
+# Load H&E embeddings (UNI or Virchow — use whichever you generated)
+he_df = pd.read_parquet('UNI.parquet')       # or 'Virchow2.parquet'
+
+# Load RNA embeddings (scGPT or Nicheformer — use whichever you generated)
+rna_df = pd.read_parquet('scGPT.parquet')    # or 'nicheformer.parquet'
 
 # Load AnnData object
 adata = sc.read_h5ad("object.h5ad")
 
 # Mapping sample_name -> AEInputs
+# z_he holds H&E embeddings (UNI or Virchow); z_rna holds RNA embeddings (scGPT or Nicheformer)
 sample_name = 'sample1'
 ae_inputs_by_sample = {
     sample_name: AEInputs(
         adata=adata,
-        z_uni=uni_df,
-        z_scgpt=scgpt_df,
+        z_he=he_df,
+        z_rna=rna_df,
     ),
 }
 
+# Select the checkpoints matching your FM combination (e.g. UNI + scGPT shown here)
+ae_ckpt  = resolve_pkg_ckpt("checkpoint_dir_ae/spatialfusion-ae-uni-scgpt.pt")
+gcn_ckpt = resolve_pkg_ckpt("checkpoint_dir_gcn/spatialfusion-gcn-uni-scgpt.pt")
+
 # Run the multimodal embedding pipeline
+# spatial_key: key in adata.obsm holding X/Y coordinates — set to match your AnnData
+#   (e.g. check with list(adata.obsm.keys()))
+# celltype_key: key in adata.obs holding cell type labels — set to match your AnnData
+#   (e.g. check with adata.obs.columns.tolist())
 emb_df = run_full_embedding(
     ae_inputs_by_sample=ae_inputs_by_sample,
-    device="cuda:0", # if cpu, "cpu"
+    ae_model_path=ae_ckpt,
+    gcn_model_path=gcn_ckpt,
+    device="cuda:0",  # or "cpu"
     combine_mode="average",
-    spatial_key='spatial',
-    celltype_key='major_celltype',
+    spatial_key='spatial_px',
+    celltype_key='celltypes',
     save_ae_dir=None,  # optional
 )
 ```
@@ -158,50 +230,29 @@ SpatialFusion operates on a **single-cell AnnData object** paired with an **H&E 
 
 | Key                                | Description                                                       |
 | ---------------------------------- | ----------------------------------------------------------------- |
-| `adata.obsm['spatial']`            | X/Y centroid coordinates of each cell/nucleus in WSI pixel space. |
+| `adata.obsm['spatial_px']`         | X/Y centroid coordinates of each cell/nucleus in WSI pixel space. This is the default key expected by SpatialFusion; pass `spatial_key=` to `run_full_embedding` if your AnnData uses a different key (check with `list(adata.obsm.keys())`). |
 | `adata.X`                          | Raw counts (cell × gene). Must be single-cell resolution.         |
-| `adata.obs['celltype']` (optional) | Annotated cell types (`major_celltype` in examples).              |
+| `adata.obs['celltypes']` (optional) | Annotated cell types. This is the default key; pass `celltype_key=` to `run_full_embedding` if your AnnData uses a different column name (check with `adata.obs.columns.tolist()`). |
 
 ### **Whole-Slide Image (WSI)**
 
 A high-resolution H&E image corresponding to the same tissue section used for ST.
-Used to compute morphology embeddings such as **UNI**.
+Used to compute morphology embeddings with your chosen H&E foundation model (**UNI** or **Virchow**).
 
 ---
 
 ## Typical Workflow
 
 1. **Prepare ST AnnData and the matched H&E WSI**
-2. **Run scGPT** to compute molecular embeddings
-3. **Run UNI** to compute morphology embeddings
-4. **Run SpatialFusion** to integrate all modalities into joint embeddings
-5. **Cluster & visualize**
+2. **Run your RNA foundation model** (scGPT or Nicheformer) to compute molecular embeddings
+3. **Run your H&E foundation model** (UNI or Virchow) to compute morphology embeddings
+4. **Select the matching pretrained checkpoint pair** (see [Pretrained Weights](#pretrained-weights) above)
+5. **Run SpatialFusion** to integrate all modalities into joint embeddings
+6. **Cluster & visualize**
 
    * Leiden clustering
    * UMAP
    * Spatial niche maps
-
----
-
-## Tutorials
-
-A complete tutorial notebook is available at:
-
-```
-tutorials/embed-and-finetune-sample.ipynb
-```
-
-Additional required packages (scGPT, UNI dependencies) must be installed manually.
-Follow the instructions at: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
-
-We also provide a ready-to-use environment file:
-
-```
-spatialfusion_env.yml
-```
-
-Tutorial data is available on Zenodo:
-[https://zenodo.org/records/17594071](https://zenodo.org/records/17594071)
 
 ---
 
@@ -216,10 +267,16 @@ Tutorial data is available on Zenodo:
 │   └── spatialfusion
 │       ├── data
 │       │   ├── checkpoint_dir_ae
-│       │   │   └── spatialfusion-multimodal-ae.pt
+│       │   │   ├── spatialfusion-ae-uni-scgpt.pt
+│       │   │   ├── spatialfusion-ae-uni-nicheformer.pt
+│       │   │   ├── spatialfusion-ae-virchow-scgpt.pt
+│       │   │   └── spatialfusion-ae-virchow-nicheformer.pt
 │       │   └── checkpoint_dir_gcn
-│       │       ├── spatialfusion-full-gcn.pt
-│       │       └── spatialfusion-he-gcn.pt
+│       │       ├── spatialfusion-gcn-uni-scgpt.pt
+│       │       ├── spatialfusion-gcn-uni-nicheformer.pt
+│       │       ├── spatialfusion-gcn-virchow-scgpt.pt
+│       │       ├── spatialfusion-gcn-virchow-nicheformer.pt
+│       │       └── spatialfusion-he-gcn-uni-scgpt.pt
 │       ├── embed/
 │       ├── finetune/
 │       ├── models/
@@ -251,7 +308,7 @@ Tutorial data is available on Zenodo:
 
 If you use SpatialFusion, please cite:
 
-> Yates J, Shavakhi M, Choueiri T, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal foundation model for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
+> Yates J, Shavakhi M, Choueiri T, Camp SY, Van Allen EM, Uhler C. SpatialFusion: A lightweight multimodal framework for pathway-informed spatial niche mapping. _bioRxiv_. 2026. doi:10.64898/2026.03.16.712056
 
 ---
 
