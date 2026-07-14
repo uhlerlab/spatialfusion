@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build:
@@ -40,7 +39,6 @@ jobs:
     name: Publish to TestPyPI
     needs: build
     runs-on: ubuntu-latest
-    environment: testpypi
 
     steps:
       - uses: actions/download-artifact@v4
@@ -52,6 +50,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
   test-testpypi-install:
     name: Test install from TestPyPI
@@ -105,7 +104,6 @@ jobs:
     name: Publish to PyPI
     needs: test-testpypi-install
     runs-on: ubuntu-latest
-    environment: pypi
 
     steps:
       - uses: actions/download-artifact@v4
@@ -115,3 +113,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
