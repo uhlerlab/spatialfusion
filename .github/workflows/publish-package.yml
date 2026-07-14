@@ -68,10 +68,14 @@ jobs:
         id: version
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          import tomllib
-          with open("pyproject.toml", "rb") as fh:
-              data = tomllib.load(fh)
-          print(f"version={data['project']['version']}")
+          import re
+          from pathlib import Path
+
+          text = Path("pyproject.toml").read_text()
+          match = re.search(r'^version = "([^"]+)"$', text, re.MULTILINE)
+          if not match:
+              raise RuntimeError("Could not find package version in pyproject.toml")
+          print(f"version={match.group(1)}")
           PY
 
       - name: Install from TestPyPI
