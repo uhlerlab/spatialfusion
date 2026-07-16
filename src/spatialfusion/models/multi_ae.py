@@ -130,7 +130,7 @@ class PairedAE(nn.Module):
     modalities and supports:
     - Within-modality reconstruction
     - Cross-modality reconstruction
-    - Single-modality (UNI-only) operation
+    - Single-modality operation (modality 1 only or modality 2 only)
 
     Args:
         d1_dim: Input feature dimension for modality 1.
@@ -150,7 +150,7 @@ class PairedAE(nn.Module):
         self.decoder1 = Decoder(latent_dim, dec_hidden_dims, d1_dim)
         self.decoder2 = Decoder(latent_dim, dec_hidden_dims, d2_dim)
 
-    def forward(self, d1, d2=None):
+    def forward(self, d1=None, d2=None):
         """
         Forward pass of the paired autoencoder.
 
@@ -159,36 +159,50 @@ class PairedAE(nn.Module):
         - Within-modality reconstructions
         - Cross-modality reconstructions
 
-        If only `d1` is provided, the model runs in single-modality mode.
+        If only `d1` is provided, the model runs in modality-1-only mode.
+        If only `d2` is provided, the model runs in modality-2-only mode.
 
         Args:
-            d1: Input tensor for modality 1.
+            d1: Optional input tensor for modality 1.
             d2: Optional input tensor for modality 2.
 
         Returns:
             Dictionary containing:
-                - "z1": Latent embedding for modality 1
+                - "z1": Latent embedding for modality 1 (or None)
                 - "z2": Latent embedding for modality 2 (or None)
-                - "recon1": Reconstruction of modality 1
+                - "recon1": Reconstruction of modality 1 (or None)
                 - "recon2": Reconstruction of modality 2 (or None)
                 - "cross12": Reconstruction of modality 2 from z1 (or None)
                 - "cross21": Reconstruction of modality 1 from z2 (or None)
-        """
-        # Encoder for modality 1
-        z1 = self.encoder1(d1)
 
-        # If d2 is provided, run full paired AE
-        if d2 is not None:
+        Raises:
+            ValueError: If both `d1` and `d2` are None.
+        """
+        if d1 is None and d2 is None:
+            raise ValueError("At least one of d1 or d2 must be provided.")
+
+        if d1 is not None and d2 is not None:
+            # Full paired AE
+            z1 = self.encoder1(d1)
             z2 = self.encoder2(d2)
             recon1 = self.decoder1(z1)
             recon2 = self.decoder2(z2)
             cross12 = self.decoder2(z1)
             cross21 = self.decoder1(z2)
-        else:
-            # UNI-only mode
-            z2 = None
+        elif d1 is not None:
+            # Modality-1-only mode
+            z1 = self.encoder1(d1)
             recon1 = self.decoder1(z1)
+            z2 = None
             recon2 = None
+            cross12 = None
+            cross21 = None
+        else:
+            # Modality-2-only mode
+            z2 = self.encoder2(d2)
+            recon2 = self.decoder2(z2)
+            z1 = None
+            recon1 = None
             cross12 = None
             cross21 = None
 
