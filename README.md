@@ -134,6 +134,12 @@ To run SpatialFusion on H&E only, we provide a tutorial at:
 tutorials/embed-he-only.ipynb
 ```
 
+To run SpatialFusion on RNA only, we provide a tutorial at:
+
+```
+tutorials/embed-rna-only.ipynb
+```
+
 Additional packages for the foundation models you choose must be installed manually:
 
 - **scGPT**: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
@@ -163,7 +169,7 @@ SpatialFusion ships pretrained checkpoints for every combination of supported fo
 | Virchow | scGPT | `spatialfusion-ae-virchow-scgpt.pt` | `spatialfusion-gcn-virchow-scgpt.pt` |
 | Virchow | Nicheformer | `spatialfusion-ae-virchow-nicheformer.pt` | `spatialfusion-gcn-virchow-nicheformer.pt` |
 | UNI | *(H&E only)* | — | `spatialfusion-he-gcn-uni-scgpt.pt` |
-| scGPT | *(RNA only)* | — | `spatialfusion-rna-gcn-uni-scgpt.pt` |
+| *(RNA only)* | scGPT | — | `spatialfusion-rna-gcn-uni-scgpt.pt` |
 
 All checkpoints are bundled with the package under `src/spatialfusion/data/` and are resolved automatically via `spatialfusion.utils.pkg_ckpt.resolve_pkg_ckpt`.
 
