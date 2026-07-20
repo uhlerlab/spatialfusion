@@ -325,7 +325,7 @@ If you use SpatialFusion, please cite:
 
 ### Version
 
-This is the initial public release (**v0.1.0**).
+This release adds RNA-only SpatialFusion support (**v0.3.0**).
 
 ---
 
