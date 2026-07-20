@@ -11,6 +11,7 @@ The method operates at **single-cell resolution**, and can be applied to:
 
 * paired ST + H&E datasets
 * H&E whole-slide images alone
+* spatial transcriptomics data alone
 
 By combining molecular and morphological features, SpatialFusion captures coordinated patterns of tissue architecture and gene expression. A key design principle is a biologically informed definition of niches: not simply spatial neighborhoods, but **reproducible microenvironments** characterized by pathway-level activation signatures and functional coherence across tissues. To reflect this prior, the latent space of the model is trained to encode biologically meaningful pathway activations, enabling robust discovery of integrated niches.
 
@@ -133,6 +134,12 @@ To run SpatialFusion on H&E only, we provide a tutorial at:
 tutorials/embed-he-only.ipynb
 ```
 
+To run SpatialFusion on RNA only, we provide a tutorial at:
+
+```
+tutorials/embed-rna-only.ipynb
+```
+
 Additional packages for the foundation models you choose must be installed manually:
 
 - **scGPT**: [https://github.com/bowang-lab/scGPT](https://github.com/bowang-lab/scGPT)
@@ -162,6 +169,7 @@ SpatialFusion ships pretrained checkpoints for every combination of supported fo
 | Virchow | scGPT | `spatialfusion-ae-virchow-scgpt.pt` | `spatialfusion-gcn-virchow-scgpt.pt` |
 | Virchow | Nicheformer | `spatialfusion-ae-virchow-nicheformer.pt` | `spatialfusion-gcn-virchow-nicheformer.pt` |
 | UNI | *(H&E only)* | — | `spatialfusion-he-gcn-uni-scgpt.pt` |
+| *(RNA only)* | scGPT | — | `spatialfusion-rna-gcn-uni-scgpt.pt` |
 
 All checkpoints are bundled with the package under `src/spatialfusion/data/` and are resolved automatically via `spatialfusion.utils.pkg_ckpt.resolve_pkg_ckpt`.
 
@@ -224,7 +232,7 @@ This produces a DataFrame containing the final integrated embedding for all cell
 
 ## Required Inputs
 
-SpatialFusion operates on a **single-cell AnnData object** paired with an **H&E whole-slide image**. It also accepts only a WSI with cell coordinates in the H&E only mode.
+SpatialFusion operates on a **single-cell AnnData object** paired with an **H&E whole-slide image**. It also accepts only a WSI with cell coordinates in the H&E only mode, or only an AnnData object with RNA embeddings (no WSI) in the RNA only mode.
 
 ### **AnnData fields**
 
@@ -276,7 +284,8 @@ Used to compute morphology embeddings with your chosen H&E foundation model (**U
 │       │       ├── spatialfusion-gcn-uni-nicheformer.pt
 │       │       ├── spatialfusion-gcn-virchow-scgpt.pt
 │       │       ├── spatialfusion-gcn-virchow-nicheformer.pt
-│       │       └── spatialfusion-he-gcn-uni-scgpt.pt
+│       │       ├── spatialfusion-he-gcn-uni-scgpt.pt
+│       │       └── spatialfusion-rna-gcn-uni-scgpt.pt
 │       ├── embed/
 │       ├── finetune/
 │       ├── models/
@@ -316,7 +325,7 @@ If you use SpatialFusion, please cite:
 
 ### Version
 
-This is the initial public release (**v0.1.0**).
+This release adds RNA-only SpatialFusion support (**v0.3.0**).
 
 ---
 
