@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
       
 
@@ -1492,7 +1492,7 @@ using a feedforward neural network.</p>
 modalities and supports:
 - Within-modality reconstruction
 - Cross-modality reconstruction
-- Single-modality (UNI-only) operation</p>
+- Single-modality operation (modality 1 only or modality 2 only)</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1609,7 +1609,7 @@ modalities and supports:
 
 
 <h4 id="spatialfusion.models.multi_ae.PairedAE.forward" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">forward</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">forward</span><span class="p">(</span><span class="n">d1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">d2</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h4>
 
@@ -1621,7 +1621,8 @@ modalities and supports:
 - Latent representations for both modalities
 - Within-modality reconstructions
 - Cross-modality reconstructions</p>
-<p>If only <code>d1</code> is provided, the model runs in single-modality mode.</p>
+<p>If only <code>d1</code> is provided, the model runs in modality-1-only mode.
+If only <code>d2</code> is provided, the model runs in modality-2-only mode.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1643,11 +1644,11 @@ modalities and supports:
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Input tensor for modality 1.</p>
+                <p>Optional input tensor for modality 1.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1684,12 +1685,35 @@ modalities and supports:
             <td>
               <div class="doc-md-description">
                 <p>Dictionary containing:
-- "z1": Latent embedding for modality 1
+- "z1": Latent embedding for modality 1 (or None)
 - "z2": Latent embedding for modality 2 (or None)
-- "recon1": Reconstruction of modality 1
+- "recon1": Reconstruction of modality 1 (or None)
 - "recon2": Reconstruction of modality 2 (or None)
 - "cross12": Reconstruction of modality 2 from z1 (or None)
 - "cross21": Reconstruction of modality 1 from z2 (or None)</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If both <code>d1</code> and <code>d2</code> are None.</p>
               </div>
             </td>
           </tr>
@@ -2012,7 +2036,7 @@ after each hidden layer. No activation is applied to the output layer.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

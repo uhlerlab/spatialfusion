@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
       
 
@@ -1169,11 +1169,12 @@ for SpatialFusion.</p>
           <tr class="doc-section-item">
             <td><code><span title="spatialfusion.embed.embed.AEInputs.z_he">z_he</span></code></td>
             <td>
-                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+                  <code><span title="typing.Optional">Optional</span>[<span title="pandas.DataFrame">DataFrame</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>H&amp;E foundation model embeddings indexed by cell (UNI or Virchow).</p>
+                <p>Optional H&amp;E foundation model embeddings indexed by cell
+(UNI or Virchow).</p>
               </div>
             </td>
           </tr>
@@ -1443,7 +1444,8 @@ One of {"average", "concat", "z1", "z2", "gated"}.</p>
             <td>
               <div class="doc-md-description">
                 <p>A tuple <code>(z1_df, z2_df, z_joint_df)</code> where:
-- z1_df: Latent embeddings for UNI modality (cells × latent_dim).
+- z1_df: Latent embeddings for UNI modality (cells × latent_dim),
+  or empty if not produced.
 - z2_df: Latent embeddings for scGPT modality (cells × latent_dim),
   or empty if not produced.
 - z_joint_df: Combined latent embedding according to <code>combine_mode</code>.</p>
@@ -2655,7 +2657,9 @@ If omitted, the packaged pretrained AE checkpoint is used.</p>
             <td>
               <div class="doc-md-description">
                 <p>Path to GCN checkpoint (if GCN model not provided).
-If omitted, the packaged pretrained GCN checkpoint is used.</p>
+If omitted, the packaged checkpoint is selected from
+<code>combine_mode</code>: H&amp;E-only for <code>"z1"</code>, RNA-only for <code>"z2"</code>,
+and multimodal for paired fusion modes.</p>
               </div>
             </td>
             <td>
@@ -2988,7 +2992,7 @@ inference; used only when <code>gcn_batch_size</code> is set.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

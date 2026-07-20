@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
       
 
@@ -758,16 +758,16 @@
 
 
 <h1 id="data-format">Data Format</h1>
-<p>Note: This method requires at least the H&amp;E high-resolution image and X and Y coordinates extracted through segmentation (see the tutorial on extracting embeddings from H&amp;E only). Paired ST data is optional.</p>
-<p>The method requires:</p>
+<p>SpatialFusion supports paired H&amp;E and spatial transcriptomics data, H&amp;E-only data, and RNA-only data. All modes require cell coordinates; provide H&amp;E embeddings for H&amp;E-only mode, RNA embeddings for RNA-only mode, or both for paired mode.</p>
+<p>To generate H&amp;E embeddings, the method requires:</p>
 <ul>
 <li>Image (WSI): (n_px_height, n_px_width)</li>
 <li>Coordinates of cells in image space: (n_cells, 2)</li>
 </ul>
-<p>If providing paired ST data, the method accepts an AnnData object. 
+<p>For paired or RNA-only data, the method accepts an AnnData object.
 At minimum, the adata object must contain:</p>
 <ul>
-<li>adata.obsm['spatial_px']: this should contain the X and Y coordinates of the cell/nuclei centroid in the high-resolution pixel space of the associated WSI. This is the default key expected by SpatialFusion; if your AnnData uses a different key, pass <code>spatial_key=&lt;your_key&gt;</code> to <code>run_full_embedding</code> (check available keys with <code>list(adata.obsm.keys())</code>).</li>
+<li>adata.obsm['spatial_px']: this should contain the X and Y coordinates of each cell/nucleus (in high-resolution pixel space when using H&amp;E). This is the default key expected by SpatialFusion; if your AnnData uses a different key, pass <code>spatial_key=&lt;your_key&gt;</code> to <code>run_full_embedding</code> (check available keys with <code>list(adata.obsm.keys())</code>).</li>
 <li>adata.X: this should be the cell x gene matrix of raw counts (! this needs to be single-cell resolution data)</li>
 <li>(optional): adata.obs['celltypes']: the annotated cell types. This is the default key; if your AnnData uses a different column name, pass <code>celltype_key=&lt;your_key&gt;</code> to <code>run_full_embedding</code> (check available columns with <code>adata.obs.columns.tolist()</code>).</li>
 </ul>
@@ -824,7 +824,7 @@ At minimum, the adata object must contain:</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
