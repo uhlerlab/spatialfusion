@@ -39,6 +39,18 @@ from spatialfusion.utils.pkg_ckpt import resolve_pkg_ckpt
 
 DEFAULT_AE_CKPT_RELPATH = "spatialfusion-ae-uni-scgpt.pt"
 DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-gcn-uni-scgpt.pt"
+DEFAULT_HE_ONLY_GCN_CKPT_RELPATH = "spatialfusion-he-gcn-uni-scgpt.pt"
+DEFAULT_RNA_ONLY_GCN_CKPT_RELPATH = "spatialfusion-rna-gcn-uni-scgpt.pt"
+
+
+def _default_gcn_ckpt_relpath(combine_mode: str) -> str:
+    """Return the packaged GCN checkpoint appropriate for a fusion mode."""
+    mode = combine_mode.lower()
+    if mode == "z1":
+        return DEFAULT_HE_ONLY_GCN_CKPT_RELPATH
+    if mode == "z2":
+        return DEFAULT_RNA_ONLY_GCN_CKPT_RELPATH
+    return DEFAULT_GCN_CKPT_RELPATH
 
 
 def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2", "gated"]) -> pd.DataFrame:
@@ -650,7 +662,9 @@ def run_full_embedding(
         ae_model_path: Path to AE checkpoint (if AE model not provided).
             If omitted, the packaged pretrained AE checkpoint is used.
         gcn_model_path: Path to GCN checkpoint (if GCN model not provided).
-            If omitted, the packaged pretrained GCN checkpoint is used.
+            If omitted, the packaged checkpoint is selected from
+            ``combine_mode``: H&E-only for ``"z1"``, RNA-only for ``"z2"``,
+            and multimodal for paired fusion modes.
         ae_model: Optional preloaded AE model.
         gcn_model: Optional preloaded GCN model.
         latent_dim: Latent dimensionality of the AE.
@@ -691,8 +705,9 @@ def run_full_embedding(
             f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
     # Fallback to packaged pretrained GCN checkpoint when no path/model is provided.
     if gcn_model_path is None and gcn_model is None:
+        gcn_ckpt_relpath = _default_gcn_ckpt_relpath(combine_mode)
         gcn_model_path = resolve_pkg_ckpt(
-            f"checkpoint_dir_gcn/{DEFAULT_GCN_CKPT_RELPATH}"
+            f"checkpoint_dir_gcn/{gcn_ckpt_relpath}"
         )
         print(
             f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
