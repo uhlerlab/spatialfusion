@@ -20,7 +20,34 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
 
-DEFAULT_VIRCHOW2_MODEL_NAME = "hf-hub:paige-ai/Virchow2"
+VIRCHOW2_MODEL_NAME = "vit_huge_patch14_224"
+VIRCHOW2_MODEL_ARGS = {
+    "img_size": 224,
+    "init_values": 1e-5,
+    "num_classes": 0,
+    "reg_tokens": 4,
+    "mlp_ratio": 5.3375,
+    "global_pool": "",
+    "dynamic_img_size": True,
+    "mlp_layer": timm.layers.SwiGLUPacked,
+    "act_layer": torch.nn.SiLU,
+}
+VIRCHOW2_PRETRAINED_CFG = {
+    "tag": "virchow_v2",
+    "custom_load": False,
+    "input_size": (3, 224, 224),
+    "fixed_input_size": False,
+    "interpolation": "bicubic",
+    "crop_pct": 1.0,
+    "crop_mode": "center",
+    "mean": (0.485, 0.456, 0.406),
+    "std": (0.229, 0.224, 0.225),
+    "num_classes": 0,
+    "pool_size": None,
+    "first_conv": "patch_embed.proj",
+    "classifier": "head",
+}
+VIRCHOW2_OUTPUT_SHAPE = (261, 1280)
 
 
 def load_wsi(path: pl.Path):
@@ -38,21 +65,62 @@ def load_wsi(path: pl.Path):
 
 
 def load_virchow2_model(
-    model_name: str = DEFAULT_VIRCHOW2_MODEL_NAME,
+    weights_path: str,
     device: str = "cuda",
 ):
+    weights_path = pl.Path(weights_path)
+    if not weights_path.exists():
+        raise FileNotFoundError(f"Virchow2 weights not found: {weights_path}")
+
     model = timm.create_model(
-        model_name,
-        pretrained=True,
-        mlp_layer=timm.layers.SwiGLUPacked,
-        act_layer=torch.nn.SiLU,
+        VIRCHOW2_MODEL_NAME,
+        pretrained=False,
+        **VIRCHOW2_MODEL_ARGS,
     )
+    state_dict = load_weights(weights_path)
+    model.load_state_dict(state_dict, strict=True)
+    model.pretrained_cfg = VIRCHOW2_PRETRAINED_CFG.copy()
     model.eval().to(device)
+    validate_virchow2_model(model, device)
 
     transform = create_transform(
         **resolve_data_config(model.pretrained_cfg, model=model)
     )
     return model, transform
+
+
+def load_weights(weights_path: pl.Path):
+    if weights_path.suffix == ".safetensors":
+        from safetensors.torch import load_file
+
+        state_dict = load_file(weights_path)
+    else:
+        state_dict = torch.load(weights_path, map_location="cpu")
+
+    for key in ("state_dict", "model"):
+        if isinstance(state_dict, dict) and key in state_dict:
+            state_dict = state_dict[key]
+
+    if not isinstance(state_dict, dict):
+        raise TypeError(f"Expected a state dict in {weights_path}")
+
+    return {
+        key.removeprefix("module."): value
+        for key, value in state_dict.items()
+    }
+
+
+def validate_virchow2_model(model, device: str):
+    with torch.inference_mode():
+        dummy = torch.zeros(1, 3, 224, 224, device=device)
+        output = model(dummy)
+
+    expected = (1, *VIRCHOW2_OUTPUT_SHAPE)
+    if tuple(output.shape) != expected:
+        raise ValueError(
+            f"Expected Virchow2 output shape {expected}, got {tuple(output.shape)}. "
+            "Check that the weights match the published Virchow2 architecture."
+        )
 
 
 def extract_centered_patch(wsi, x: int, y: int, patch_size: int = 256):
@@ -88,12 +156,15 @@ def embed_virchow2(
     cell_names,
     he_coords,
     output_file: pl.Path,
-    model_name: str = DEFAULT_VIRCHOW2_MODEL_NAME,
+    weights_path: str,
     batch_size: int = 512,
     device: str = "cuda",
 ):
     logging.info("Loading Virchow2 model")
-    model, transform = load_virchow2_model(model_name=model_name, device=device)
+    model, transform = load_virchow2_model(
+        weights_path=weights_path,
+        device=device,
+    )
 
     embeddings = []
     cell_ids = []
@@ -165,10 +236,15 @@ def parse_args() -> argparse.Namespace:
         help="Key in `adata.obsm` containing spot or cell pixel coordinates.",
     )
     parser.add_argument(
-        "--virchow2-model-name",
+        "--virchow2-weights",
         type=str,
-        default=DEFAULT_VIRCHOW2_MODEL_NAME,
-        help="timm model name or Hugging Face Hub reference for Virchow2.",
+        required=True,
+        help=(
+            "Local Virchow2 weights file, usually `model.safetensors` or "
+            "`pytorch_model.bin`. Users must request access and obtain weights from "
+            "Paige AI at https://huggingface.co/paige-ai/Virchow2 under the upstream "
+            "terms."
+        ),
     )
     parser.add_argument(
         "--virchow2-batch-size",
@@ -216,7 +292,7 @@ def main() -> None:
         cell_names=index,
         he_coords=adata.obsm[args.spatial_key],
         output_file=out,
-        model_name=args.virchow2_model_name,
+        weights_path=args.virchow2_weights,
         batch_size=args.virchow2_batch_size,
         device=args.device,
     )
