@@ -11,6 +11,12 @@ We also provide a tutorial for the H&E only case:
 tutorials/embed-he-only.ipynb
 ```
 
+We also provide a tutorial for the RNA only case:
+
+```
+tutorials/embed-rna-only.ipynb
+```
+
 We also provide a tutorial for generating unimodal embeddings:
 
 ```

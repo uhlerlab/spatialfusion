@@ -39,6 +39,18 @@ from spatialfusion.utils.pkg_ckpt import resolve_pkg_ckpt
 
 DEFAULT_AE_CKPT_RELPATH = "spatialfusion-ae-uni-scgpt.pt"
 DEFAULT_GCN_CKPT_RELPATH = "spatialfusion-gcn-uni-scgpt.pt"
+DEFAULT_HE_ONLY_GCN_CKPT_RELPATH = "spatialfusion-he-gcn-uni-scgpt.pt"
+DEFAULT_RNA_ONLY_GCN_CKPT_RELPATH = "spatialfusion-rna-gcn-uni-scgpt.pt"
+
+
+def _default_gcn_ckpt_relpath(combine_mode: str) -> str:
+    """Return the packaged GCN checkpoint appropriate for a fusion mode."""
+    mode = combine_mode.lower()
+    if mode == "z1":
+        return DEFAULT_HE_ONLY_GCN_CKPT_RELPATH
+    if mode == "z2":
+        return DEFAULT_RNA_ONLY_GCN_CKPT_RELPATH
+    return DEFAULT_GCN_CKPT_RELPATH
 
 
 def _combine_embeddings(z1: pd.DataFrame, z2: pd.DataFrame, mode: Literal["average", "concat", "z1", "z2", "gated"]) -> pd.DataFrame:
@@ -168,12 +180,13 @@ class AEInputs:
 
     Attributes:
         adata: AnnData object containing spatial metadata.
-        z_he: H&E foundation model embeddings indexed by cell (UNI or Virchow).
+        z_he: Optional H&E foundation model embeddings indexed by cell
+            (UNI or Virchow).
         z_rna: Optional RNA foundation model embeddings indexed by cell
             (scGPT or Nicheformer).
     """
     adata: sc.AnnData
-    z_he: pd.DataFrame
+    z_he: Optional[pd.DataFrame] = None   # ← allow None
     z_rna: Optional[pd.DataFrame] = None   # ← allow None
 
 
@@ -258,7 +271,8 @@ def ae_from_arrays(
 
     Returns:
         A tuple `(z1_df, z2_df, z_joint_df)` where:
-            - z1_df: Latent embeddings for UNI modality (cells × latent_dim).
+            - z1_df: Latent embeddings for UNI modality (cells × latent_dim),
+              or empty if not produced.
             - z2_df: Latent embeddings for scGPT modality (cells × latent_dim),
               or empty if not produced.
             - z_joint_df: Combined latent embedding according to `combine_mode`.
@@ -270,13 +284,17 @@ def ae_from_arrays(
             are found between AnnData and embeddings.
     """
     # determine which inputs are required based on combine_mode
-    needs_z1 = True
+    needs_z1 = (combine_mode in ["average", "concat", "z1", "gated"])
     needs_z2 = (combine_mode in ["average", "concat", "z2", "gated"])
 
     idx = inputs.adata.obs_names.astype(str)
 
+    common = idx
     if needs_z1:
-        common = idx.intersection(inputs.z_he.index)
+        if inputs.z_he is None:
+            raise ValueError(
+                "combine_mode requires H&E input, but z_he=None")
+        common = common.intersection(inputs.z_he.index)
     if needs_z2:
         if inputs.z_rna is None:
             raise ValueError(
@@ -288,8 +306,11 @@ def ae_from_arrays(
             "No overlapping cells between adata and required embeddings.")
 
     # --- Standardize before feeding to AE
-    x1_df = safe_standardize(inputs.z_he.loc[common])
-    x1_np = x1_df.astype(np.float32).values
+    if needs_z1:
+        x1_df = safe_standardize(inputs.z_he.loc[common])
+        x1_np = x1_df.astype(np.float32).values
+    else:
+        x1_np = None
 
     if needs_z2:
         x2_df = safe_standardize(inputs.z_rna.loc[common])
@@ -301,7 +322,9 @@ def ae_from_arrays(
 
     # Auto-determine batch size if not provided
     if batch_size is None:
-        est_mem_per_sample = x1_np.shape[1] * 4 * 2
+        est_mem_per_sample = 0
+        if needs_z1:
+            est_mem_per_sample += x1_np.shape[1] * 4 * 2
         if needs_z2:
             est_mem_per_sample += x2_np.shape[1] * 4 * 2
         batch_size = max(1, int(300 * 1024 * 1024 / est_mem_per_sample))
@@ -316,8 +339,11 @@ def ae_from_arrays(
             for i in tqdm(range(0, n_samples, batch_size), desc="Processing AE in batches"):
                 end_idx = min(i + batch_size, n_samples)
 
-                batch_x1_np = x1_np[i:end_idx]
-                x1_batch = torch.from_numpy(batch_x1_np).to(device)
+                if needs_z1:
+                    batch_x1_np = x1_np[i:end_idx]
+                    x1_batch = torch.from_numpy(batch_x1_np).to(device)
+                else:
+                    x1_batch = None
 
                 if needs_z2:
                     batch_x2_np = x2_np[i:end_idx]
@@ -349,7 +375,7 @@ def ae_from_arrays(
 
     else:
         with torch.no_grad():
-            x1 = torch.from_numpy(x1_np).to(device)
+            x1 = torch.from_numpy(x1_np).to(device) if needs_z1 else None
             x2 = torch.from_numpy(x2_np).to(device) if needs_z2 else None
 
             out = model(x1, x2)
@@ -636,7 +662,9 @@ def run_full_embedding(
         ae_model_path: Path to AE checkpoint (if AE model not provided).
             If omitted, the packaged pretrained AE checkpoint is used.
         gcn_model_path: Path to GCN checkpoint (if GCN model not provided).
-            If omitted, the packaged pretrained GCN checkpoint is used.
+            If omitted, the packaged checkpoint is selected from
+            ``combine_mode``: H&E-only for ``"z1"``, RNA-only for ``"z2"``,
+            and multimodal for paired fusion modes.
         ae_model: Optional preloaded AE model.
         gcn_model: Optional preloaded GCN model.
         latent_dim: Latent dimensionality of the AE.
@@ -677,8 +705,9 @@ def run_full_embedding(
             f"[run_full_embedding] Using packaged pretrained AE checkpoint: {ae_model_path}")
     # Fallback to packaged pretrained GCN checkpoint when no path/model is provided.
     if gcn_model_path is None and gcn_model is None:
+        gcn_ckpt_relpath = _default_gcn_ckpt_relpath(combine_mode)
         gcn_model_path = resolve_pkg_ckpt(
-            f"checkpoint_dir_gcn/{DEFAULT_GCN_CKPT_RELPATH}"
+            f"checkpoint_dir_gcn/{gcn_ckpt_relpath}"
         )
         print(
             f"[run_full_embedding] Using packaged pretrained GCN checkpoint: {gcn_model_path}")
@@ -688,12 +717,23 @@ def run_full_embedding(
         # In-memory branch
         # infer dims from the first sample’s matrices
         first = next(iter(ae_inputs_by_sample.values()))
-        d1_dim = first.z_he.shape[1]
+        tmp_state = None
+        if first.z_he is not None:
+            d1_dim = first.z_he.shape[1]
+        else:
+            # load temporarily to inspect expected input dim
+            tmp_state = torch.load(ae_model_path, map_location="cpu")
+            # encoder1 layers always start with a weight of shape (latent_dim, d1_dim)
+            for key, v in tmp_state.items():
+                if key.startswith("encoder1.model.0.weight"):
+                    d1_dim = v.shape[1]
+                    break
         if first.z_rna is not None:
             d2_dim = first.z_rna.shape[1]
         else:
             # load temporarily to inspect expected input dim
-            tmp_state = torch.load(ae_model_path, map_location="cpu")
+            if tmp_state is None:
+                tmp_state = torch.load(ae_model_path, map_location="cpu")
             # encoder2 layers always start with a weight of shape (latent_dim, d2_dim)
             for key, v in tmp_state.items():
                 if key.startswith("encoder2.model.0.weight"):
