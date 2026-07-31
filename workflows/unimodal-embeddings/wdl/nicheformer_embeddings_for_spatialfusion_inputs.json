@@ -1,0 +1,4 @@
+{
+  "GenerateNicheformerEmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
+  "GenerateNicheformerEmbeddingsForSpatialFusion.technology": "xenium"
+}
