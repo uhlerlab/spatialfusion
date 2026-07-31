@@ -4,7 +4,7 @@ version 1.0
 workflow GenerateNicheformerEmbeddingsForSpatialFusion {
   input {
     File adata
-    String technology = "xenium"
+    String technology
 
     Float? nicheformer_mem_gb
     Int? cpu_cores
@@ -16,7 +16,7 @@ workflow GenerateNicheformerEmbeddingsForSpatialFusion {
 
   parameter_meta {
     adata: "AnnData (.h5ad) input used for Nicheformer embeddings."
-    technology: "Spatial transcriptomics technology used to select bundled Nicheformer reference defaults. Currently supported: xenium, cosmx, and merfish."
+    technology: "Required spatial transcriptomics technology used to select bundled Nicheformer reference defaults. Choose one of: xenium, cosmx, or merfish."
     nicheformer_mem_gb: "Optional runtime override for Nicheformer task memory in GB. Default is 24 GB."
     cpu_cores: "Optional runtime override for CPU cores requested by the task. Default is 4."
     disk_gb: "Optional runtime override for local disk requested by the Nicheformer task."
@@ -44,7 +44,7 @@ workflow GenerateNicheformerEmbeddingsForSpatialFusion {
 task RunNicheformerEmbedding {
   input {
     File adata
-    String technology = "xenium"
+    String technology
 
     Int nicheformer_batch_size = 16
     Int max_seq_len = 1500
@@ -66,7 +66,7 @@ task RunNicheformerEmbedding {
   }
 
   parameter_meta {
-    technology: "Spatial transcriptomics technology used to select bundled Nicheformer reference defaults."
+    technology: "Required spatial transcriptomics technology used to select bundled Nicheformer reference defaults. Choose one of: xenium, cosmx, or merfish."
     nicheformer_batch_size: "Advanced setting for Nicheformer inference batch size."
     max_seq_len: "Advanced setting for Nicheformer maximum sequence length."
     aux_tokens: "Advanced setting for Nicheformer auxiliary token count."
