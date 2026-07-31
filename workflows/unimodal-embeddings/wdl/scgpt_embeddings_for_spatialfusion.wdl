@@ -11,7 +11,7 @@ workflow GenerateScgptEmbeddingsForSpatialFusion {
     Int? disk_gb
     Int? preemptible_tries
 
-    String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:workflow-0.2"
+    String scgpt_embeddings_docker = "vanallenlab/scgpt-embeddings:workflow-0.1"
   }
 
   parameter_meta {
@@ -21,7 +21,7 @@ workflow GenerateScgptEmbeddingsForSpatialFusion {
     cpu_cores: "Optional runtime override for CPU cores requested by the task. Default is 2."
     disk_gb: "Optional runtime override for local disk requested by the scGPT task."
     preemptible_tries: "Optional runtime override for the number of times Cromwell may try the task on preemptible/spot capacity before falling back to a regular VM."
-    unimodal_embeddings_docker: "Docker image containing the embedding script, scGPT weights, and runtime dependencies."
+    scgpt_embeddings_docker: "Docker image containing the embedding script, scGPT weights, and runtime dependencies."
   }
 
   call RunScgptEmbedding {
@@ -32,7 +32,7 @@ workflow GenerateScgptEmbeddingsForSpatialFusion {
       cpu_cores = cpu_cores,
       disk_gb = disk_gb,
       preemptible_tries = preemptible_tries,
-      docker = unimodal_embeddings_docker
+      docker = scgpt_embeddings_docker
   }
 
   output {
