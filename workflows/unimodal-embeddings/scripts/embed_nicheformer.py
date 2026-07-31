@@ -8,7 +8,6 @@ import warnings
 import anndata as ad
 import numpy as np
 import pandas as pd
-import scanpy as sc
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -18,6 +17,26 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
+
+DEFAULT_NICHEFORMER_WEIGHTS = pl.Path("/app/nicheformer_model/nicheformer.ckpt")
+DEFAULT_NICHEFORMER_REPO = pl.Path("/opt/nicheformer")
+DEFAULT_NICHEFORMER_MODEL_MEANS = DEFAULT_NICHEFORMER_REPO / "data/model_means"
+DEFAULT_NICHEFORMER_VOCAB = DEFAULT_NICHEFORMER_MODEL_MEANS / "model.h5ad"
+DEFAULT_NICHEFORMER_GTF = pl.Path("/app/nicheformer_refs/gencode.v48.basic.annotation.gtf.gz")
+TECHNOLOGY_DEFAULTS = {
+    "cosmx": {
+        "technology_mean": DEFAULT_NICHEFORMER_MODEL_MEANS / "cosmx_mean_script.npy",
+        "assay": 8,
+    },
+    "merfish": {
+        "technology_mean": DEFAULT_NICHEFORMER_MODEL_MEANS / "merfish_mean_script.npy",
+        "assay": 7,
+    },
+    "xenium": {
+        "technology_mean": DEFAULT_NICHEFORMER_MODEL_MEANS / "xenium_mean_script.npy",
+        "assay": 9,
+    },
+}
 
 
 def set_seed(seed: int = 42) -> None:
@@ -166,7 +185,7 @@ def run_embed_nicheformer(
     adata = map_genes_to_ensembl(adata, symbol_to_ens)
     logging.info("After mapping: %s", adata.shape)
 
-    vocab = sc.read_h5ad(vocab_path)
+    vocab = ad.read_h5ad(vocab_path)
     adata, ordered_genes, vocab = align_to_vocab(adata, vocab)
     logging.info("Final aligned shape: %s", adata.shape)
 
@@ -242,25 +261,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--nicheformer-weights",
         type=pl.Path,
-        required=True,
+        default=DEFAULT_NICHEFORMER_WEIGHTS,
         help="Path to the Nicheformer checkpoint file, usually `nicheformer.ckpt`.",
+    )
+    parser.add_argument(
+        "--technology",
+        choices=sorted(TECHNOLOGY_DEFAULTS),
+        default="xenium",
+        help="Spatial transcriptomics technology used to select bundled Nicheformer reference defaults.",
     )
     parser.add_argument(
         "--nicheformer-vocab",
         type=pl.Path,
-        required=True,
+        default=DEFAULT_NICHEFORMER_VOCAB,
         help="Path to the Nicheformer vocabulary AnnData file, usually `model.h5ad`.",
     )
     parser.add_argument(
         "--nicheformer-technology-mean",
         type=pl.Path,
-        required=True,
-        help="Path to the Nicheformer technology mean NumPy file.",
+        default=None,
+        help="Optional override for the Nicheformer technology mean NumPy file.",
     )
     parser.add_argument(
         "--gtf",
         type=pl.Path,
-        required=True,
+        default=DEFAULT_NICHEFORMER_GTF,
         help="GTF annotation file used to map gene symbols to Ensembl IDs.",
     )
     parser.add_argument(
@@ -327,8 +352,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--assay",
         type=int,
-        default=9,
-        help="Nicheformer metadata code for assay.",
+        default=None,
+        help="Optional override for the Nicheformer metadata code for assay.",
     )
     parser.add_argument(
         "--device",
@@ -343,6 +368,10 @@ def main() -> None:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    technology_defaults = TECHNOLOGY_DEFAULTS[args.technology]
+    technology_mean = args.nicheformer_technology_mean or technology_defaults["technology_mean"]
+    assay = args.assay if args.assay is not None else technology_defaults["assay"]
+
     out = args.output_dir / args.nicheformer_output_name
     if out.exists() and not args.overwrite:
         raise FileExistsError(f"{out} exists. Use --overwrite to replace it.")
@@ -354,7 +383,7 @@ def main() -> None:
         output_dir=str(args.output_dir),
         model_path=str(args.nicheformer_weights),
         vocab_path=str(args.nicheformer_vocab),
-        technology_mean_path=str(args.nicheformer_technology_mean),
+        technology_mean_path=str(technology_mean),
         gtf_path=str(args.gtf),
         output_name=args.nicheformer_output_name,
         batch_size=args.nicheformer_batch_size,
@@ -367,7 +396,7 @@ def main() -> None:
         split=args.split,
         modality=args.modality,
         species=args.species,
-        assay=args.assay,
+        assay=assay,
         device=args.device,
     )
 
