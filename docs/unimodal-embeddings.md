@@ -19,12 +19,12 @@ Best if you:
 
 Launch via Dockstore:
 
-| Modality | Model | Dockstore workflow |
+| Data type | Model | Dockstore workflow |
 | --- | --- | --- |
-| Spatial transcriptomics | scGPT | <https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/scgpt-embeddings-for-spatialfusion:main?tab=info> |
-| Spatial transcriptomics | Nicheformer | <https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/nicheformer-embeddings-for-spatialfusion:main?tab=info> |
-| H&E / WSI | UNI | <https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/uni-embeddings-for-spatialfusion:main?tab=info> |
-| H&E / WSI | Virchow2 | <https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/virchow2-embeddings-for-spatialfusion:main?tab=info> |
+| Spatial transcriptomics | scGPT | [scgpt-embeddings-for-spatialfusion](https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/scgpt-embeddings-for-spatialfusion:main?tab=info) |
+| Spatial transcriptomics | Nicheformer | [nicheformer-embeddings-for-spatialfusion](https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/nicheformer-embeddings-for-spatialfusion:main?tab=info) |
+| H&E / WSI | UNI | [uni-embeddings-for-spatialfusion](https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/uni-embeddings-for-spatialfusion:main?tab=info) |
+| H&E / WSI | Virchow2 | [virchow2-embeddings-for-spatialfusion](https://dockstore.org/workflows/github.com/uhlerlab/spatialfusion/virchow2-embeddings-for-spatialfusion:main?tab=info) |
 
 ### Local / self-managed GPU workflow (this guide) 
 
@@ -49,23 +49,30 @@ Before running this step, you will need:
 
 ### Spatial transcriptomics embeddings
 
-| Model | Required inputs | Bundled in Docker |
-| --- | --- | --- |
-| scGPT | `adata`, `input_is_log_normalized` | scGPT weights at `/app/scgpt_weights` |
-| Nicheformer | `adata`, `technology` | Nicheformer checkpoint, vocabulary, technology mean files, and GTF |
+For scGPT, you need:
 
-For scGPT, set `input_is_log_normalized` to `True` if the selected AnnData expression values are already log-normalized and `False` if they are not. For the SpatialFusion tutorial data, use `False`.
+- `adata`: AnnData (`.h5ad`) file used for scGPT embeddings.
+- `input_is_log_normalized`: whether the selected AnnData expression values are already log-normalized.
 
-For Nicheformer, choose one of `xenium`, `cosmx`, or `merfish` for `technology`.
+scGPT weights are bundled in the scGPT Docker image at `/app/scgpt_weights`. For the SpatialFusion tutorial data, use `False` for `input_is_log_normalized`.
+
+For Nicheformer, you need:
+
+- `adata`: AnnData (`.h5ad`) file used for Nicheformer embeddings.
+- `technology`: one of `xenium`, `cosmx`, or `merfish`.
+
+Nicheformer weights and reference files are bundled in the Nicheformer Docker image.
 
 ### H&E / WSI embeddings
 
-| Model | Required inputs | User-provided weights |
-| --- | --- | --- |
-| UNI | `adata`, `wsi`, `uni_weights` | UNI2-h `pytorch_model.bin` from <https://huggingface.co/MahmoodLab/UNI2-h> |
-| Virchow2 | `adata`, `wsi`, `virchow2_weights` | `model.safetensors` or `pytorch_model.bin` from <https://huggingface.co/paige-ai/Virchow2> |
+For both H&E models, you need:
 
-For H&E models, spatial coordinates are expected in `adata.obsm["spatial"]`. The `wsi` input should be a TIFF / OME-TIFF image.
+- `adata`: AnnData (`.h5ad`) file with spatial coordinates in `adata.obsm["spatial"]`.
+- `wsi`: H&E / whole-slide image in TIFF / OME-TIFF format.
+
+For UNI, you also need `uni_weights`, the UNI2-h `pytorch_model.bin` from <https://huggingface.co/MahmoodLab/UNI2-h>.
+
+For Virchow2, you also need `virchow2_weights`, either `model.safetensors` or `pytorch_model.bin` from <https://huggingface.co/paige-ai/Virchow2>.
 
 
 ## 3. Set local paths
