@@ -2,10 +2,12 @@
 
 These WDL workflows generate the unimodal embedding inputs used by SpatialFusion:
 
-- `GenerateScgptEmbeddingsForSpatialFusion` generates `scGPT.parquet` from spatial transcriptomics data.
-- `GenerateNicheformerEmbeddingsForSpatialFusion` generates `nicheformer.parquet` from spatial transcriptomics data.
-- `GenerateUniEmbeddingsForSpatialFusion` generates `UNI.parquet` from H&E / whole-slide imaging data.
-- `GenerateVirchow2EmbeddingsForSpatialFusion` generates `Virchow2.parquet` from H&E / whole-slide imaging data.
+| Workflow | Modality | Output | Docker |
+| --- | --- | --- | --- |
+| `GenerateScgptEmbeddingsForSpatialFusion` | spatial transcriptomics | `scGPT.parquet` | `vanallenlab/scgpt-embeddings:workflow-0.1` |
+| `GenerateNicheformerEmbeddingsForSpatialFusion` | spatial transcriptomics | `nicheformer.parquet` | `vanallenlab/nicheformer-embeddings:workflow-0.1` |
+| `GenerateUniEmbeddingsForSpatialFusion` | H&E / whole-slide imaging | `UNI.parquet` | `vanallenlab/he-embeddings:workflow-0.1` |
+| `GenerateVirchow2EmbeddingsForSpatialFusion` | H&E / whole-slide imaging | `Virchow2.parquet` | `vanallenlab/he-embeddings:workflow-0.1` |
 
 Use the model-specific workflow for each embedding you want to generate. The H&E workflows share a Docker image, but keep separate WDLs so each workflow has a small, explicit input surface.
 
