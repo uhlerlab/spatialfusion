@@ -1,0 +1,5 @@
+{
+  "GenerateVirchow2EmbeddingsForSpatialFusion.adata": "gs://YOUR_BUCKET/path/to/object.h5ad",
+  "GenerateVirchow2EmbeddingsForSpatialFusion.wsi": "gs://YOUR_BUCKET/path/to/wsi.ome.tif",
+  "GenerateVirchow2EmbeddingsForSpatialFusion.virchow2_weights": "gs://YOUR_BUCKET/path/to/model.safetensors"
+}
