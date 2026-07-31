@@ -114,7 +114,8 @@ def embed_uni(
         cell_ids.extend(batch_ids)
 
     out = pl.Path(output_dir) / output_name
-    pd.DataFrame(embeddings, index=cell_ids).to_parquet(out)
+    embedding_columns = [str(i) for i in range(len(embeddings[0]))]
+    pd.DataFrame(embeddings, index=cell_ids, columns=embedding_columns).to_parquet(out)
     print(f"Saved {len(cell_ids)} embeddings to {out}")
 
 

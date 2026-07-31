@@ -237,7 +237,8 @@ def run_embed_nicheformer(
 
     embeddings = np.concatenate(embeddings, axis=0)
     out = pl.Path(output_dir) / output_name
-    pd.DataFrame(embeddings, index=cell_ids).to_parquet(out)
+    embedding_columns = [str(i) for i in range(embeddings.shape[1])]
+    pd.DataFrame(embeddings, index=cell_ids, columns=embedding_columns).to_parquet(out)
     logging.info("Saved embeddings to %s", out)
 
 

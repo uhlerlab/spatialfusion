@@ -13,6 +13,7 @@ numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
 
 DEFAULT_SCFOUNDATION_DIR = pl.Path("/app/zero-shot-scfoundation")
+DEFAULT_SCGPT_WEIGHTS = pl.Path("/app/scgpt_weights")
 
 
 def run_embed_scgpt(
@@ -85,7 +86,9 @@ def run_embed_scgpt(
         if "cell_id" in input_data.adata.obs.columns
         else input_data.adata.obs.index
     )
-    pd.DataFrame(input_data.adata.obsm["X_scGPT"], index=index).to_parquet(
+    embeddings = input_data.adata.obsm["X_scGPT"]
+    embedding_columns = [str(i) for i in range(embeddings.shape[1])]
+    pd.DataFrame(embeddings, index=index, columns=embedding_columns).to_parquet(
         pl.Path(output_dir) / output_name
     )
 
@@ -110,7 +113,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--scgpt-weights",
         type=pl.Path,
-        required=True,
+        default=DEFAULT_SCGPT_WEIGHTS,
         help="Path to scGPT model directory (expects args/vocab/weights files).",
     )
     parser.add_argument(

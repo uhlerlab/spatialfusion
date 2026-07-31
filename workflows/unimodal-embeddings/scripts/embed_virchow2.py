@@ -113,7 +113,8 @@ def load_weights(weights_path: pl.Path):
 def validate_virchow2_model(model, device: str):
     with torch.inference_mode():
         dummy = torch.zeros(1, 3, 224, 224, device=device)
-        output = model(dummy)
+        with torch.autocast(device_type=device, dtype=torch.float16, enabled=device == "cuda"):
+            output = model(dummy)
 
     expected = (1, *VIRCHOW2_OUTPUT_SHAPE)
     if tuple(output.shape) != expected:
@@ -121,6 +122,10 @@ def validate_virchow2_model(model, device: str):
             f"Expected Virchow2 output shape {expected}, got {tuple(output.shape)}. "
             "Check that the weights match the published Virchow2 architecture."
         )
+
+    del dummy, output
+    if device == "cuda":
+        torch.cuda.empty_cache()
 
 
 def extract_centered_patch(wsi, x: int, y: int, patch_size: int = 256):
@@ -197,7 +202,8 @@ def embed_virchow2(
         embeddings.extend(batch_embs)
         cell_ids.extend(batch_ids)
 
-    pd.DataFrame(embeddings, index=cell_ids).to_parquet(output_file)
+    embedding_columns = [str(i) for i in range(len(embeddings[0]))]
+    pd.DataFrame(embeddings, index=cell_ids, columns=embedding_columns).to_parquet(output_file)
     logging.info("Saved %s embeddings to %s", len(cell_ids), output_file)
 
 
@@ -237,7 +243,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--virchow2-weights",
-        type=str,
+        type=pl.Path,
         required=True,
         help=(
             "Local Virchow2 weights file, usually `model.safetensors` or "
