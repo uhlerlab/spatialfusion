@@ -12,7 +12,7 @@ workflow GenerateUniEmbeddingsForSpatialFusion {
     Int? disk_gb
     Int? preemptible_tries
 
-    String unimodal_embeddings_docker = "vanallenlab/unimodal-embeddings:workflow-0.2"
+    String he_embeddings_docker = "vanallenlab/he-embeddings:workflow-0.1"
   }
 
   parameter_meta {
@@ -23,7 +23,7 @@ workflow GenerateUniEmbeddingsForSpatialFusion {
     cpu_cores: "Optional runtime override for CPU cores requested by the task. Default is 2."
     disk_gb: "Optional runtime override for local disk requested by the UNI task."
     preemptible_tries: "Optional runtime override for the number of times Cromwell may try the task on preemptible/spot capacity before falling back to a regular VM."
-    unimodal_embeddings_docker: "Docker image containing the embedding script and runtime dependencies."
+    he_embeddings_docker: "Docker image containing the H&E embedding scripts and runtime dependencies."
   }
 
   call RunUniEmbedding {
@@ -35,7 +35,7 @@ workflow GenerateUniEmbeddingsForSpatialFusion {
       cpu_cores = cpu_cores,
       disk_gb = disk_gb,
       preemptible_tries = preemptible_tries,
-      docker = unimodal_embeddings_docker
+      docker = he_embeddings_docker
   }
 
   output {
