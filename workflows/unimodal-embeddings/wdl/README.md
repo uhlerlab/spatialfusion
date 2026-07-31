@@ -36,4 +36,4 @@ UNI weights are not bundled with the workflow. Users must request access to the 
 - `adata`: AnnData (`.h5ad`) file used for Nicheformer embeddings.
 - `technology`: required spatial transcriptomics technology used to select bundled Nicheformer defaults. Choose one of: `xenium`, `cosmx`, or `merfish`.
 
-The prototype Nicheformer Docker image bundles the Nicheformer checkpoint (`nicheformer.ckpt`), vocabulary AnnData file (`model.h5ad`), technology mean files, and GTF annotation file. Users provide only the AnnData input and technology label at runtime.
+The Nicheformer Docker image bundles the Nicheformer checkpoint (`nicheformer.ckpt`), vocabulary AnnData file (`model.h5ad`), technology mean files, and GTF annotation file. Users provide only the AnnData input and technology label at runtime.
