@@ -1,5 +1,12 @@
 # Unimodal Embeddings for SpatialFusion
 
+> **Combined workflow version notice**
+>
+> The combined UNI + scGPT workflow, `unimodal-embeddings-for-spatialfusion`,
+> is no longer available on the `main` branch. To use the combined workflow
+> from Dockstore or Terra, select the `0.3.0` version. The current `main`
+> branch provides model-specific workflows separately.
+
 These WDL workflows generate the unimodal embedding inputs used by SpatialFusion:
 
 | Workflow | Modality | Output | Docker |
