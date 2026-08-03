@@ -1,0 +1,61 @@
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
+ARG NICHEFORMER_COMMIT=485cadbc5caa15119adfd54228f8a8af835fcabc
+ARG GENCODE_GTF_URL=https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_48/gencode.v48.basic.annotation.gtf.gz
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    git \
+    wget \
+    ca-certificates \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN python -m pip install --upgrade pip
+
+# Install the CUDA PyTorch stack first so Nicheformer's `torch>=2.5.1`
+# dependency resolves to a GPU-enabled build.
+RUN pip install --no-cache-dir \
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    --index-url https://download.pytorch.org/whl/cu124
+
+# Install Nicheformer with its upstream dependency set. Keep this image
+# Nicheformer-specific rather than hand-maintaining a minimal dependency subset.
+RUN pip install --no-cache-dir \
+    "git+https://github.com/theislab/nicheformer.git@${NICHEFORMER_COMMIT}"
+
+# Extra runtime dependencies used by the SpatialFusion wrapper script.
+RUN pip install --no-cache-dir \
+    pyarrow \
+    tqdm
+
+RUN mkdir -p /app/nicheformer_model /app/nicheformer_refs
+
+COPY scripts/embed_nicheformer.py /app/embed_nicheformer.py
+
+# Keep the pinned upstream repository in the image so reference artifact paths
+# mirror the Nicheformer project layout.
+RUN git clone https://github.com/theislab/nicheformer.git /opt/nicheformer && \
+    cd /opt/nicheformer && \
+    git checkout "${NICHEFORMER_COMMIT}" && \
+    rm -rf .git
+
+# Nicheformer checkpoint used by embed_nicheformer.py defaults.
+# Source: Nicheformer authors' pretraining weights on Mendeley Data:
+# https://data.mendeley.com/preview/87gm9hrgm8?a=d95a6dde-e054-4245-a7eb-0522d6ea7dff
+# This should be staged in the Docker build context at:
+#   weights/nicheformer/nicheformer.ckpt
+COPY weights/nicheformer/nicheformer.ckpt /app/nicheformer_model/nicheformer.ckpt
+
+# GENCODE v48 basic gene annotation used by embed_nicheformer.py defaults.
+RUN wget -O /app/nicheformer_refs/gencode.v48.basic.annotation.gtf.gz "${GENCODE_GTF_URL}"

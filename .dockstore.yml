@@ -1,12 +1,6 @@
 version: 1.2
 
 workflows:
-  - name: unimodal-embeddings-for-spatialfusion
-    subclass: WDL
-    primaryDescriptorPath: /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion.wdl
-    readMePath: /workflows/unimodal-embeddings/wdl/README.md
-    testParameterFiles:
-      - /workflows/unimodal-embeddings/wdl/unimodal_embeddings_for_spatialfusion_inputs.json
   - name: scgpt-embeddings-for-spatialfusion
     subclass: WDL
     primaryDescriptorPath: /workflows/unimodal-embeddings/wdl/scgpt_embeddings_for_spatialfusion.wdl
@@ -19,3 +13,15 @@ workflows:
     readMePath: /workflows/unimodal-embeddings/wdl/README.md
     testParameterFiles:
       - /workflows/unimodal-embeddings/wdl/uni_embeddings_for_spatialfusion_inputs.json
+  - name: virchow2-embeddings-for-spatialfusion
+    subclass: WDL
+    primaryDescriptorPath: /workflows/unimodal-embeddings/wdl/virchow2_embeddings_for_spatialfusion.wdl
+    readMePath: /workflows/unimodal-embeddings/wdl/README.md
+    testParameterFiles:
+      - /workflows/unimodal-embeddings/wdl/virchow2_embeddings_for_spatialfusion_inputs.json
+  - name: nicheformer-embeddings-for-spatialfusion
+    subclass: WDL
+    primaryDescriptorPath: /workflows/unimodal-embeddings/wdl/nicheformer_embeddings_for_spatialfusion.wdl
+    readMePath: /workflows/unimodal-embeddings/wdl/README.md
+    testParameterFiles:
+      - /workflows/unimodal-embeddings/wdl/nicheformer_embeddings_for_spatialfusion_inputs.json
