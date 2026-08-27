@@ -164,6 +164,8 @@ spatialfusion_env.yml
 Tutorial data is available on Zenodo:
 [https://zenodo.org/records/17594071](https://zenodo.org/records/17594071)
 
+The estimated tutorial time running on a single GPU on the tutorial data, given FM embeddings are already computed, is 5-10 min. 
+
 ---
 
 ## Pretrained Weights
