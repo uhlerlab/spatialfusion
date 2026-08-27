@@ -112,6 +112,14 @@ PY
   ```
 * CPU installations work everywhere but are significantly slower.
 Estimated install time: 15-30 min on a 'normal' desktop.
+
+**Tested system configuration**
+OS: Rocky Linux 8.10 (Green Obsidian), x86_64
+CPU: AMD EPYC 7763 64-Core Processor
+GPU used: 1 × NVIDIA RTX A6000
+GPU memory: 48 GiB VRAM
+NVIDIA driver: 570.124.04
+
 ---
 
 ## Tutorials
