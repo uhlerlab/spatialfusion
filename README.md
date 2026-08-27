@@ -111,7 +111,7 @@ PY
   export SPATIALFUSION_ROOT=/your/path
   ```
 * CPU installations work everywhere but are significantly slower.
-
+Estimated install time: 15-30 min on a 'normal' desktop.
 ---
 
 ## Tutorials
