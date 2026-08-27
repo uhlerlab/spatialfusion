@@ -323,6 +323,12 @@ Used to compute morphology embeddings with your chosen H&E foundation model (**U
 
 ---
 
+## Reproducibility repository
+
+The repository containing the code to reproduce the analysis presented in the manuscript can be found [here](https://github.com/uhlerlab/spatialfusion-analysis/tree/main)
+
+---
+
 ## Citing
 
 If you use SpatialFusion, please cite:
