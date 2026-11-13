@@ -1,5 +1,9 @@
 # SpatialFusion
 
+<div align="center">
+  <img src="logo-spatialfusion.png" alt="Method Logo" width="200">
+</div>
+
 [![Docs](https://img.shields.io/badge/docs-online-blue.svg)](
 https://uhlerlab.github.io/spatialfusion/
 )
